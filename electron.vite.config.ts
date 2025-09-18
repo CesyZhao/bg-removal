@@ -1,6 +1,7 @@
 import { resolve } from 'path'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import vue from '@vitejs/plugin-vue'
+import { vitePluginForArco } from '@arco-plugins/vite-vue'
 
 export default defineConfig({
   main: {
@@ -12,9 +13,16 @@ export default defineConfig({
   renderer: {
     resolve: {
       alias: {
-        '@renderer': resolve('src/renderer')
+        '@renderer': resolve('src/renderer'),
+        '@common': resolve('src/common'),
+        '@main': resolve('src/main')
       }
     },
-    plugins: [vue()]
+    plugins: [
+      vue(),
+      vitePluginForArco({
+        style: 'css'
+      })
+    ]
   }
 })
