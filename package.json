@@ -18,7 +18,17 @@
     "build:unpack": "npm run build && electron-builder --dir",
     "build:win": "npm run build && electron-builder --win",
     "build:mac": "npm run build && electron-builder --mac",
-    "build:linux": "npm run build && electron-builder --linux"
+    "build:linux": "npm run build && electron-builder --linux",
+    "prepare": "husky install"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,vue}": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "*.{json,css,less,scss,md}": [
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.2",
@@ -26,6 +36,8 @@
     "electron-updater": "^6.3.9"
   },
   "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
     "@electron-toolkit/eslint-config-prettier": "3.0.0",
     "@electron-toolkit/eslint-config-ts": "^3.0.0",
     "@electron-toolkit/tsconfig": "^1.0.1",
@@ -36,6 +48,8 @@
     "electron-vite": "^4.0.0",
     "eslint": "^9.31.0",
     "eslint-plugin-vue": "^10.3.0",
+    "husky": "^8.0.0",
+    "lint-staged": "^16.1.6",
     "prettier": "^3.6.2",
     "typescript": "^5.8.3",
     "vite": "^7.0.5",

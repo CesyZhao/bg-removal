@@ -1,0 +1,11 @@
+@import './base.css';
+
+body {
+  /* background-image: url('./wavy-lines.svg'); */
+  background-size: cover;
+  user-select: none;
+}
+
+#app {
+  height: 100%;
+}
