@@ -14,7 +14,7 @@
           class="modal-content modal-box opacity-100 w-[520px] max-h-[75vh] bg-base-100 shadow-xl overflow-hidden"
         >
           <!-- Header -->
-          <div class="flex items-center justify-between mb-6 pb-4 border-b border-base-200">
+          <div class="flex items-center justify-between mb-6 pb-4 border-b border-base-300">
             <div class="flex items-center gap-3">
               <div class="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
                 <svg
@@ -82,7 +82,7 @@
                         {{ $t(setting.titleKey) }}
                       </h4>
                       <div
-                        class="lg:tooltip tooltip-top tooltip-primary"
+                        class="tooltip tooltip-right tooltip-primary"
                         :data-tip="$t(setting.descriptionKey)"
                       >
                         <icon-question-circle-fill
@@ -102,7 +102,7 @@
                           :value="setting.value"
                           readonly
                           :placeholder="$t('settings.select')"
-                          class="input input-sm join-item flex-1 bg-base-200 text-xs border-base-300 focus:border-primary"
+                          class="input input-sm join-item flex-1 bg-base-200 text-xs"
                         />
                         <button
                           class="btn btn-sm join-item btn-primary px-3"
@@ -152,7 +152,7 @@
                     <!-- Select dropdown -->
                     <select
                       v-else-if="setting.type === 'select'"
-                      class="select select-sm select-bordered w-full bg-base-200 border-base-300 focus:border-primary text-xs"
+                      class="select select-sm w-full bg-base-200 border-base-500 text-xs"
                       :value="setting.value"
                       @change="
                         (e) =>
@@ -174,7 +174,7 @@
           </div>
 
           <!-- Footer -->
-          <div class="flex items-center justify-between mt-6 border-t border-base-200">
+          <div class="flex items-center justify-between pt-2 mt-6 border-t border-base-300">
             <div class="text-xs text-base-content/50">
               <span v-if="changedSettings.size > 0" class="flex items-center gap-1">
                 <div class="w-2 h-2 bg-warning rounded-full animate-pulse"></div>
