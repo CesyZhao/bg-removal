@@ -83,6 +83,10 @@ export default {
       saveFailed: 'Failed to save settings',
       resetSuccess: 'Settings reset to default',
       resetFailed: 'Failed to reset settings'
+    },
+    status: {
+      unsavedChanges: '{0} unsaved changes',
+      allSaved: 'All settings saved'
     }
   },
   entry: {

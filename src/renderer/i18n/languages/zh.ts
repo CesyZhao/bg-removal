@@ -81,6 +81,10 @@ export default {
       resetFailed: '重置设置失败',
       restartRequired: '设置已保存，应用将在{0}秒后重新启动以应用更改',
       unsavedChanges: '有未保存的更改，确定要放弃吗？'
+    },
+    status: {
+      unsavedChanges: '{0} 项更改未保存',
+      allSaved: '所有设置已保存'
     }
   },
   entry: {

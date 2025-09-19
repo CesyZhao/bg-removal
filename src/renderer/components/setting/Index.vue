@@ -102,7 +102,7 @@
                           :value="setting.value"
                           readonly
                           :placeholder="$t('settings.select')"
-                          class="input input-sm join-item flex-1 bg-base-200 text-xs"
+                          class="input input-sm join-item flex-1 bg-base-200 text-base-content text-xs border-base-300 focus:border-primary placeholder:text-base-content/50"
                         />
                         <button
                           class="btn btn-sm join-item btn-primary px-3"
@@ -135,16 +135,10 @@
                           }}
                         </span>
                         <input
+                          v-model="setting.value"
                           type="checkbox"
                           class="toggle toggle-primary toggle-sm"
-                          :checked="Boolean(setting.value)"
-                          @change="
-                            (e) =>
-                              handleValueChange(
-                                setting.key,
-                                (e.target as HTMLInputElement)?.checked
-                              )
-                          "
+                          @change="handleValueChange(setting.key, setting.value)"
                         />
                       </label>
                     </div>
@@ -152,17 +146,15 @@
                     <!-- Select dropdown -->
                     <select
                       v-else-if="setting.type === 'select'"
-                      class="select select-sm w-full bg-base-200 border-base-500 text-xs"
-                      :value="setting.value"
-                      @change="
-                        (e) =>
-                          handleValueChange(setting.key, (e.target as HTMLSelectElement)?.value)
-                      "
+                      v-model="setting.value"
+                      class="select select-sm select-bordered w-full bg-base-200 text-base-content border-base-300 focus:border-primary text-xs"
+                      @change="handleValueChange(setting.key, setting.value)"
                     >
                       <option
                         v-for="(option, optionIndex) in setting.options"
                         :key="`${option.value}-${optionIndex}`"
                         :value="option.value"
+                        class="text-base-content bg-base-200"
                       >
                         {{ $t(option.label) }}
                       </option>
@@ -178,9 +170,9 @@
             <div class="text-xs text-base-content/50">
               <span v-if="changedSettings.size > 0" class="flex items-center gap-1">
                 <div class="w-2 h-2 bg-warning rounded-full animate-pulse"></div>
-                {{ changedSettings.size }} 项更改未保存
+                {{ $t('settings.status.unsavedChanges', [changedSettings.size]) }}
               </span>
-              <span v-else class="text-success">所有设置已保存</span>
+              <span v-else class="text-success">{{ $t('settings.status.allSaved') }}</span>
             </div>
             <div class="flex gap-3">
               <button
@@ -280,12 +272,12 @@ const visible = ref(false)
 const appSetting = ref<SettingGroup[]>([])
 const changedSettings = ref<Map<string, unknown>>(new Map())
 const originalSettings = ref<Map<string, unknown>>(new Map())
-const confirmModalVisible = ref(false)
 
 // 添加缺失的方法
 const handlePopoverVisibleChange = (): void => {
   visible.value = !visible.value
   if (visible.value) {
+    // 每次打开弹窗时重新初始化设置
     initSettings()
     // 重置变更记录
     changedSettings.value.clear()
@@ -295,10 +287,32 @@ const handlePopoverVisibleChange = (): void => {
 const closePopover = (force?: boolean): void => {
   // 如果有未保存的更改，显示确认对话框
   if (changedSettings.value.size > 0 && !force) {
-    confirmModalVisible.value = true
+    if (confirm(t('settings.messages.unsavedChanges'))) {
+      // 用户确认放弃更改，恢复原始值
+      restoreOriginalValues()
+      visible.value = false
+    }
+    // 如果用户取消，不关闭弹窗
   } else {
     visible.value = false
   }
+}
+
+// 恢复原始值的函数
+const restoreOriginalValues = (): void => {
+  // 恢复所有变更的设置项为原始值
+  for (const [key] of changedSettings.value.entries()) {
+    const setting = appSetting.value
+      .flatMap((category) => category.items)
+      .find((item) => item.key === key)
+
+    if (setting && originalSettings.value.has(key)) {
+      setting.value = originalSettings.value.get(key) as string | number | boolean | undefined
+    }
+  }
+
+  // 清空变更记录
+  changedSettings.value.clear()
 }
 
 // 实现路径选择功能
@@ -306,9 +320,19 @@ const handlePathSelect = async (setting): Promise<void> => {
   try {
     const selectedPath = await fileModule.selectFolder()
     if (selectedPath) {
+      // 更新设置值
       setting.value = selectedPath
-      // 记录变更
-      changedSettings.value.set(setting.key, selectedPath)
+
+      // 获取原始值进行比较
+      const originalValue = originalSettings.value.get(setting.key)
+
+      // 如果当前值与原始值相同，从变更记录中移除该项
+      if (selectedPath === originalValue) {
+        changedSettings.value.delete(setting.key)
+      } else {
+        // 只有当值真正发生变化时才记录变更
+        changedSettings.value.set(setting.key, selectedPath)
+      }
     }
   } catch (error) {
     console.error('选择路径失败:', error)
@@ -316,9 +340,26 @@ const handlePathSelect = async (setting): Promise<void> => {
   }
 }
 
-const handleValueChange = async (key: string, value): Promise<void> => {
-  // 只记录变更，不立即保存
-  changedSettings.value.set(key, value)
+const handleValueChange = (key: string, value: unknown): void => {
+  // 立即更新设置项的值（仅用于界面显示）
+  const setting = appSetting.value
+    .flatMap((category) => category.items)
+    .find((item) => item.key === key)
+
+  if (setting) {
+    setting.value = value as string | number | boolean | undefined
+  }
+
+  // 获取原始值进行比较
+  const originalValue = originalSettings.value.get(key)
+
+  // 如果当前值与原始值相同，从变更记录中移除该项
+  if (value === originalValue) {
+    changedSettings.value.delete(key)
+  } else {
+    // 只有当值真正发生变化时才记录变更
+    changedSettings.value.set(key, value)
+  }
 }
 
 // 应用主题
@@ -398,6 +439,17 @@ const saveAllSettings = async (): Promise<void> => {
       if (keysRequiredRestart.includes(key) && originalSettings.value.get(key) !== value) {
         needsRestart = true
       }
+
+      // 在保存时应用设置
+      if (key === 'theme') {
+        applyTheme(value as string)
+      }
+      if (key === 'language') {
+        locale.value = value as string
+      }
+
+      // 更新原始设置值，以便后续比较
+      originalSettings.value.set(key, value)
     }
     // 清空变更记录
     changedSettings.value.clear()
@@ -583,14 +635,80 @@ onMounted(() => {
 }
 
 /* 增强表单元素效果 */
-.input:focus,
-.select:focus {
+.input:focus {
   box-shadow: 0 0 0 2px hsl(var(--p) / 0.2);
   transform: translateY(-1px);
 }
 
 .toggle:focus {
   box-shadow: 0 0 0 2px hsl(var(--p) / 0.2);
+}
+
+/* 确保表单元素文本可见性 */
+.input {
+  color: hsl(var(--bc)) !important;
+}
+
+.input::placeholder {
+  color: hsl(var(--bc) / 0.5) !important;
+}
+
+.select {
+  color: hsl(var(--bc)) !important;
+  /* 修复 select 点击问题 */
+  pointer-events: auto !important;
+  user-select: none;
+  cursor: pointer;
+}
+
+.select option {
+  color: hsl(var(--bc)) !important;
+  background-color: hsl(var(--b2)) !important;
+  /* 确保选项可以正常点击 */
+  pointer-events: auto !important;
+  cursor: pointer;
+}
+
+/* 移除可能干扰的样式 */
+.select:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px hsl(var(--p) / 0.2);
+  transform: translateY(-1px);
+}
+
+.select option:hover {
+  background-color: hsl(var(--b3)) !important;
+}
+
+/* 确保在不同主题下文本颜色正确 */
+[data-theme='light'] .input,
+[data-theme='light'] .select {
+  color: #1f2937 !important; /* gray-800 */
+  background-color: #f3f4f6 !important; /* gray-100 */
+}
+
+[data-theme='light'] .select option {
+  color: #1f2937 !important;
+  background-color: #f3f4f6 !important; /* gray-100 */
+}
+
+[data-theme='light'] .select option:hover {
+  background-color: #e5e7eb !important; /* gray-200 */
+}
+
+[data-theme='dark'] .input,
+[data-theme='dark'] .select {
+  color: #f9fafb !important; /* gray-50 */
+  background-color: #374151 !important; /* gray-700 */
+}
+
+[data-theme='dark'] .select option {
+  color: #f9fafb !important;
+  background-color: #374151 !important; /* gray-700 */
+}
+
+[data-theme='dark'] .select option:hover {
+  background-color: #4b5563 !important; /* gray-600 */
 }
 
 /* 优化 tooltip 样式 */
