@@ -1,7 +1,7 @@
 import { resolve } from 'path'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import vue from '@vitejs/plugin-vue'
-import { vitePluginForArco } from '@arco-plugins/vite-vue'
+import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   main: {
@@ -11,6 +11,11 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin()]
   },
   renderer: {
+    css: {
+      postcss: {
+        plugins: []
+      }
+    },
     resolve: {
       alias: {
         '@renderer': resolve('src/renderer'),
@@ -18,11 +23,6 @@ export default defineConfig({
         '@main': resolve('src/main')
       }
     },
-    plugins: [
-      vue(),
-      vitePluginForArco({
-        style: 'css'
-      })
-    ]
+    plugins: [vue(), tailwindcss()]
   }
 })

@@ -1,5 +1,7 @@
-<script setup lang="ts"></script>
-
 <template>
-  <div id="app"></div>
+  <Setting />
 </template>
+
+<script setup lang="ts">
+import Setting from '@renderer/components/setting/Index.vue'
+</script>

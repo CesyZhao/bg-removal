@@ -1,0 +1,99 @@
+@font-face {
+  font-family: 'iconfont'; /* Project id 4862604 */
+  src:
+    url('iconfont.woff2?t=1750901156154') format('woff2'),
+    url('iconfont.woff?t=1750901156154') format('woff'),
+    url('iconfont.ttf?t=1750901156154') format('truetype');
+}
+
+.iconfont {
+  font-family: 'iconfont' !important;
+  font-size: 16px;
+  font-style: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.icon-redo:before {
+  content: '\e6e5';
+}
+
+.icon-undo:before {
+  content: '\e6e6';
+}
+
+.icon-download1:before {
+  content: '\e66c';
+}
+
+.icon-suoxiao:before {
+  content: '\ec13';
+}
+
+.icon-fangda:before {
+  content: '\ec14';
+}
+
+.icon-ico-quchubeijing:before {
+  content: '\e690';
+}
+
+.icon-left:before {
+  content: '\e628';
+}
+
+.icon-right:before {
+  content: '\e642';
+}
+
+.icon-tianjia:before {
+  content: '\e620';
+}
+
+.icon-download:before {
+  content: '\e7ef';
+}
+
+.icon-tupianshibie:before {
+  content: '\e825';
+}
+
+.icon-tupian:before {
+  content: '\e7dc';
+}
+
+.icon-tianjiawenzi:before {
+  content: '\e64c';
+}
+
+.icon-beijing-tihuanbeijing:before {
+  content: '\e619';
+}
+
+.icon-mosaic:before {
+  content: '\e676';
+}
+
+.icon-tiquwenzi:before {
+  content: '\e66b';
+}
+
+.icon-tupianshengcheng:before {
+  content: '\e636';
+}
+
+.icon-language-outline:before {
+  content: '\e7df';
+}
+
+.icon-setting:before {
+  content: '\e657';
+}
+
+.icon-light:before {
+  content: '\e600';
+}
+
+.icon-dark:before {
+  content: '\e601';
+}

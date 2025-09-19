@@ -8,14 +8,6 @@
   --color-theme-2: #647eff;
 }
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
-  margin: 0;
-  font-weight: normal;
-}
-
 ul {
   list-style: none;
 }

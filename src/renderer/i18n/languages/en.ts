@@ -4,7 +4,9 @@ export default {
     downloading: 'Downloading',
     downloadStarted: 'Download started',
     downloadFailed: 'Download failed',
-    downloadCompleted: 'Download completed'
+    downloadCompleted: 'Download completed',
+    enabled: 'Enabled',
+    disabled: 'Disabled'
   },
   nav: {
     theme: 'Theme',

@@ -4,7 +4,9 @@ export default {
     downloading: '下载中',
     downloadStarted: '下载已开始',
     downloadFailed: '下载失败',
-    downloadCompleted: '下载完成'
+    downloadCompleted: '下载完成',
+    enabled: '已启用',
+    disabled: '已禁用'
   },
   nav: {
     theme: '主题',

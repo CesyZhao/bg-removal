@@ -9,6 +9,9 @@
   "compilerOptions": {
     "composite": true,
     "baseUrl": ".",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "moduleResolution": "node",
     "paths": {
       "@renderer/*": [
         "src/renderer/*"

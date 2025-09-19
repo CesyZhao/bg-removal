@@ -1,0 +1,15 @@
+@import 'tailwindcss';
+@plugin "daisyui";
+
+/* Tailwind CSS v4 配置 */
+@theme {
+  /* 保持默认间距配置，确保 my-8 等类名正常工作 */
+}
+
+@layer components {
+  /* 自定义组件样式 */
+}
+
+@layer utilities {
+  /* 自定义工具类 */
+}
