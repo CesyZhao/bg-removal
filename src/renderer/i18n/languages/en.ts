@@ -120,5 +120,37 @@ export default {
       downloaded: 'Downloaded',
       notDownloaded: 'Not Downloaded'
     }
+  },
+  splash: {
+    appName: 'Background Eraser',
+    title: 'Getting things ready...',
+    subtitle: "This will take a moment. We're setting up the application for you.",
+    steps: {
+      environment: {
+        title: 'Environment Monitoring',
+        description: 'Checking system compatibility and resources...',
+        completed: 'System compatibility and resources checked.'
+      },
+      model: {
+        title: 'Model Download',
+        description: 'Downloading the latest background removal model. ({0})',
+        progress: '{0}MB',
+        waiting: 'Waiting to start download...',
+        downloading: 'Downloading background removal model...',
+        completed: 'Model download completed.'
+      },
+      config: {
+        title: 'Application Configuration',
+        description: 'Setting up application preferences and settings...',
+        waiting: 'Waiting for configuration...',
+        completed: 'Application configuration completed.'
+      }
+    },
+    status: {
+      progress: 'Setup is in progress. The application will start automatically.',
+      initializing: 'Initializing...',
+      ready: 'Ready to go!',
+      allCompleted: 'All steps completed, application will start soon...'
+    }
   }
 }

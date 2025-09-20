@@ -116,5 +116,37 @@ export default {
       downloaded: '已下载',
       notDownloaded: '未下载'
     }
+  },
+  splash: {
+    appName: 'Background Eraser',
+    title: '正在准备中...',
+    subtitle: '这需要一点时间，我们正在为您设置应用程序。',
+    steps: {
+      environment: {
+        title: '环境监测',
+        description: '正在检查系统兼容性和资源状态...',
+        completed: '系统兼容性和资源检查完成。'
+      },
+      model: {
+        title: '模型下载',
+        description: '正在下载最新的背景移除模型。({0})',
+        progress: '{0}MB',
+        waiting: '等待开始下载...',
+        downloading: '正在下载背景移除模型...',
+        completed: '模型下载完成。'
+      },
+      config: {
+        title: '应用配置',
+        description: '正在设置应用程序首选项和设置...',
+        waiting: '等待配置...',
+        completed: '应用程序配置完成。'
+      }
+    },
+    status: {
+      progress: '设置正在进行中。应用程序将自动启动。',
+      initializing: '正在初始化...',
+      ready: '准备就绪！',
+      allCompleted: '所有步骤已完成，应用程序即将启动...'
+    }
   }
 }
