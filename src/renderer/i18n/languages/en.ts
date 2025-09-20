@@ -150,7 +150,9 @@ export default {
       progress: 'Setup is in progress. The application will start automatically.',
       initializing: 'Initializing...',
       ready: 'Ready to go!',
-      allCompleted: 'All steps completed, application will start soon...'
+      allCompleted: 'All steps completed, application will start soon...',
+      networkError: 'Network connection failed, retrying...',
+      downloadError: 'Model download failed, please check your network connection'
     }
   }
 }

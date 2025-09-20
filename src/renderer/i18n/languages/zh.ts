@@ -146,7 +146,9 @@ export default {
       progress: '设置正在进行中。应用程序将自动启动。',
       initializing: '正在初始化...',
       ready: '准备就绪！',
-      allCompleted: '所有步骤已完成，应用程序即将启动...'
+      allCompleted: '所有步骤已完成，应用程序即将启动...',
+      networkError: '网络连接失败，正在重试...',
+      downloadError: '模型下载失败，请检查网络连接'
     }
   }
 }

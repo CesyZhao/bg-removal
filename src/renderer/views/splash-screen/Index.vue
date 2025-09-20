@@ -137,22 +137,12 @@
               <h3 class="font-semibold text-base-content text-sm truncate">
                 {{ $t('splash.steps.model.title') }}
               </h3>
-              <span v-if="currentStep === 1" class="text-xs text-primary font-medium shrink-0">
-                {{ Math.round(modelProgress) }}%
-              </span>
             </div>
             <p class="text-base-content/60 text-xs leading-relaxed mb-2">
               <span v-if="currentStep < 1">{{ $t('splash.steps.model.waiting') }}</span>
               <span v-else-if="currentStep === 1">{{ $t('splash.steps.model.downloading') }}</span>
               <span v-else>{{ $t('splash.steps.model.completed') }}</span>
             </p>
-            <!-- 模型下载进度条 -->
-            <div v-if="currentStep === 1" class="w-full bg-base-200 rounded-full h-1">
-              <div
-                class="bg-gradient-to-r from-primary to-primary-focus h-1 rounded-full transition-all duration-300"
-                :style="{ width: `${modelProgress}%` }"
-              ></div>
-            </div>
           </div>
         </div>
 
@@ -207,9 +197,9 @@
           }}</span>
           <span class="text-xs font-bold text-primary">{{ Math.round(progress) }}%</span>
         </div>
-        <div class="w-full bg-base-200 rounded-full h-2 overflow-hidden shadow-inner">
+        <div class="w-full bg-base-600 rounded-full h-2 overflow-hidden shadow-inner">
           <div
-            class="bg-gradient-to-r from-primary to-primary-focus h-2 rounded-full transition-all duration-700 ease-out"
+            class="bg-gradient-to-r from-primary to-primary h-2 rounded-full transition-all duration-700 ease-out"
             :style="{ width: `${progress}%` }"
           ></div>
         </div>
@@ -241,6 +231,10 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import {
+  getBackgroundRemovalProcessor,
+  type ModelDownloadProgress
+} from '@renderer/processors/background-removal'
 
 const { t } = useI18n()
 
@@ -263,11 +257,32 @@ const currentStep = ref(0)
 const modelProgress = ref(0)
 const appVersion = ref('1.0.0')
 const isCompleted = ref(false)
+const modelName = ref('')
+const downloadedMB = ref(0)
+const totalMB = ref(0)
 
 // 计算进度百分比
 const progress = computed(() => {
   return Math.min((currentStep.value / 3) * 100, 100)
 })
+
+// 处理模型下载进度
+const handleModelDownloadProgress = (progress: ModelDownloadProgress): void => {
+  modelProgress.value = progress.progress
+  modelName.value = progress.modelName
+  downloadedMB.value = Math.round(progress.loaded / (1024 * 1024))
+  totalMB.value = Math.round(progress.total / (1024 * 1024))
+
+  console.log(`模型下载进度: ${progress.progress}% - ${progress.modelName}`)
+
+  if (progress.status === 'completed') {
+    // 模型下载完成，进入下一步
+    setTimeout(() => {
+      currentStep.value = 2
+      emit('stepChanged', 2)
+    }, 500)
+  }
+}
 
 // 获取当前步骤的状态消息
 const getCurrentStepMessage = (): string => {
@@ -285,46 +300,56 @@ const getCurrentStepMessage = (): string => {
   }
 }
 
-// 模拟启动流程
-const simulateStartup = (): void => {
-  // 步骤1: 环境检测
-  setTimeout(() => {
-    currentStep.value = 1
-    modelProgress.value = 0
-    emit('stepChanged', 1)
+// 启动流程
+const startupProcess = async (): Promise<void> => {
+  try {
+    // 步骤1: 环境检测
+    setTimeout(() => {
+      currentStep.value = 1
+      emit('stepChanged', 1)
 
-    // 模拟模型下载进度
-    const progressInterval = setInterval(() => {
-      modelProgress.value += Math.random() * 10
-      if (modelProgress.value >= 100) {
-        modelProgress.value = 100
-        clearInterval(progressInterval)
+      // 开始模型初始化
+      initializeModel()
+    }, 800)
+
+    // 步骤3: 应用配置（在模型下载完成后会自动触发步骤2）
+    setTimeout(() => {
+      if (currentStep.value >= 2) {
+        currentStep.value = 3
+        emit('stepChanged', 3)
       }
-    }, 150)
-  }, 800)
+    }, 6000)
 
-  // 步骤2: 模型下载
-  setTimeout(() => {
-    currentStep.value = 2
-    emit('stepChanged', 2)
-  }, 2000)
+    // 完成启动
+    setTimeout(() => {
+      isCompleted.value = true
+      emit('complete')
+      props.onComplete?.()
+    }, 7500)
+  } catch (error) {
+    console.error('启动流程失败:', error)
+  }
+}
 
-  // 步骤3: 应用配置
-  setTimeout(() => {
-    currentStep.value = 3
-    emit('stepChanged', 3)
-  }, 4000)
+// 初始化模型
+const initializeModel = async (): Promise<void> => {
+  try {
+    const processor = getBackgroundRemovalProcessor()
+    processor.setDownloadProgressCallback(handleModelDownloadProgress)
 
-  // 完成启动
-  setTimeout(() => {
-    isCompleted.value = true
-    emit('complete')
-    props.onComplete?.()
-  }, 5500)
+    await processor.initialize()
+  } catch (error) {
+    console.error('模型初始化失败:', error)
+    // 即使模型初始化失败，也继续后续步骤
+    setTimeout(() => {
+      currentStep.value = 2
+      emit('stepChanged', 2)
+    }, 1000)
+  }
 }
 
 onMounted(() => {
-  simulateStartup()
+  startupProcess()
 })
 </script>
 

@@ -34,6 +34,7 @@
     "@arco-design/web-vue": "^2.57.0",
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
+    "@huggingface/transformers": "^3.7.3",
     "electron-updater": "^6.3.9"
   },
   "devDependencies": {
