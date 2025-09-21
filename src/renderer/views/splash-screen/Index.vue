@@ -58,195 +58,52 @@
       <!-- 步骤列表 -->
       <div class="space-y-3 mb-6">
         <!-- 环境监测 -->
-        <div class="flex items-center gap-3 transition-all duration-300">
-          <div class="step-icon flex-shrink-0">
-            <div
-              v-if="currentStep > 0"
-              class="w-6 h-6 bg-gradient-to-br from-success to-success-focus rounded-full flex items-center justify-center shadow-sm transition-all duration-300"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="w-4 h-4 text-success-content"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="3"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-            </div>
-            <div
-              v-else-if="currentStep === 0"
-              class="w-6 h-6 border-2 border-primary rounded-full flex items-center justify-center animate-pulse"
-            >
-              <div class="w-2 h-2 bg-primary rounded-full"></div>
-            </div>
-            <div v-else class="w-6 h-6 border-2 border-base-300 rounded-full"></div>
-          </div>
-          <div class="flex-1 min-w-0">
-            <h3 class="font-semibold text-base-content text-sm mb-1 truncate">
-              {{ $t('splash.steps.environment.title') }}
-            </h3>
-            <p class="text-base-content/60 text-xs leading-relaxed">
-              {{
-                currentStep > 0
-                  ? $t('splash.steps.environment.completed')
-                  : $t('splash.steps.environment.description')
-              }}
-            </p>
-          </div>
-        </div>
+        <StepItem
+          :title="$t('splash.steps.environment.title')"
+          :icon-status="getEnvironmentStepIconStatus()"
+        >
+          <span v-if="currentStep > 0">
+            {{ $t('splash.steps.environment.completed') }}
+          </span>
+          <span v-else>
+            {{ $t('splash.steps.environment.description') }}
+          </span>
+        </StepItem>
 
         <!-- 模型下载和配置 -->
-        <div class="flex items-center gap-3 transition-all duration-300">
-          <div class="step-icon flex-shrink-0">
-            <div
-              v-if="currentStep > 1"
-              class="w-6 h-6 bg-gradient-to-br from-success to-success-focus rounded-full flex items-center justify-center shadow-sm transition-all duration-300"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="w-4 h-4 text-success-content"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="3"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-            </div>
-            <div
-              v-else-if="hasDownloadError || hasConfigError"
-              class="w-6 h-6 bg-gradient-to-br from-error to-error-focus rounded-full flex items-center justify-center shadow-sm transition-all duration-300"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="w-4 h-4 text-error-content"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </div>
-            <div
-              v-else-if="currentStep === 1"
-              class="w-6 h-6 border-2 border-primary rounded-full flex items-center justify-center relative"
-            >
-              <div class="w-2 h-2 bg-primary rounded-full animate-ping absolute"></div>
-              <div class="w-2 h-2 bg-primary rounded-full"></div>
-            </div>
-            <div v-else class="w-6 h-6 border-2 border-base-300 rounded-full"></div>
-          </div>
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center justify-between mb-1">
-              <h3 class="font-semibold text-base-content text-sm truncate">
-                {{ $t('splash.steps.model.title') }}
-              </h3>
-            </div>
-            <p
-              class="text-base-content/60 text-xs leading-relaxed mb-2 overflow-hidden text-ellipsis whitespace-nowrap"
-            >
-              <span v-if="currentStep < 1">{{ $t('splash.steps.model.waiting') }}</span>
-              <span v-else-if="currentStep === 1 && (hasConfigError || hasDownloadError)">
-                <span v-if="hasDownloadError" class="text-error">{{
-                  $t('splash.status.modelDownloadFailed')
-                }}</span>
-                <span v-else-if="hasConfigError" class="text-error">{{
-                  $t('splash.status.modelConfigFailed')
-                }}</span>
-              </span>
-              <span v-else-if="currentStep === 1 && !hasConfigError && !hasDownloadError">
-                <span v-if="modelProgress >= 0">
-                  {{ $t('splash.steps.model.downloading') }}
-                  <span class="text-xs text-base-content/50">
-                    {{ modelProgress }}%
-                    <span v-if="totalMB > 0">({{ downloadedMB }}MB / {{ totalMB }}MB)</span>
-                  </span>
+        <StepItem :title="$t('splash.steps.model.title')" :icon-status="getModelStepIconStatus()">
+          <span v-if="currentStep < 1">{{ $t('splash.steps.model.waiting') }}</span>
+          <span v-else-if="currentStep === 1 || currentStep === 2">
+            <span v-if="hasDownloadError" class="text-error">{{
+              $t('splash.status.modelDownloadFailed')
+            }}</span>
+            <span v-else-if="hasConfigError" class="text-error">{{
+              $t('splash.status.modelConfigFailed')
+            }}</span>
+            <span v-else-if="currentStep === 1">
+              <span v-if="modelProgress > 0">
+                {{ $t('splash.steps.model.downloading') }}
+                <span class="text-xs text-base-content/50">
+                  {{ modelProgress }}%
+                  <span v-if="totalMB > 0">({{ downloadedMB }}MB / {{ totalMB }}MB)</span>
                 </span>
-                <span v-else>{{ $t('splash.steps.model.completed') }}</span>
               </span>
               <span v-else>{{ $t('splash.steps.model.completed') }}</span>
-            </p>
-          </div>
-        </div>
+            </span>
+            <span v-else>{{ $t('splash.steps.model.completed') }}</span>
+          </span>
+          <span v-else>{{ $t('splash.steps.model.completed') }}</span>
+        </StepItem>
 
         <!-- 应用配置 -->
-        <div class="flex items-center gap-3 transition-all duration-300">
-          <div class="step-icon flex-shrink-0">
-            <div
-              v-if="currentStep > 2"
-              class="w-6 h-6 bg-gradient-to-br from-success to-success-focus rounded-full flex items-center justify-center shadow-sm transition-all duration-300"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="w-4 h-4 text-success-content"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="3"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-            </div>
-            <div
-              v-else-if="currentStep === 2 && hasConfigError"
-              class="w-6 h-6 bg-gradient-to-br from-error to-error-focus rounded-full flex items-center justify-center shadow-sm transition-all duration-300"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="w-4 h-4 text-error-content"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </div>
-            <div
-              v-else-if="currentStep === 2"
-              class="w-6 h-6 border-2 border-primary rounded-full flex items-center justify-center"
-            >
-              <div class="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
-            </div>
-            <div v-else class="w-6 h-6 border-2 border-base-300 rounded-full"></div>
-          </div>
-          <div class="flex-1 min-w-0">
-            <h3 class="font-semibold text-base-content text-sm mb-1 truncate">
-              {{ $t('splash.steps.config.title') }}
-            </h3>
-            <p class="text-base-content/60 text-xs leading-relaxed">
-              <span v-if="currentStep < 2">{{ $t('splash.steps.config.waiting') }}</span>
-              <span v-else-if="currentStep === 2 && hasConfigError" class="text-error">{{
-                $t('splash.status.modelConfigFailed')
-              }}</span>
-              <span v-else-if="currentStep === 2">{{ $t('splash.steps.config.description') }}</span>
-              <span v-else>{{ $t('splash.steps.config.completed') }}</span>
-            </p>
-          </div>
-        </div>
+        <StepItem :title="$t('splash.steps.config.title')" :icon-status="getConfigStepIconStatus()">
+          <span v-if="currentStep < 2">{{ $t('splash.steps.config.waiting') }}</span>
+          <span v-else-if="currentStep === 2 && hasConfigError" class="text-error">{{
+            $t('splash.status.modelConfigFailed')
+          }}</span>
+          <span v-else-if="currentStep === 2">{{ $t('splash.steps.config.description') }}</span>
+          <span v-else>{{ $t('splash.steps.config.completed') }}</span>
+        </StepItem>
       </div>
 
       <!-- 进度条 -->
@@ -266,32 +123,20 @@
       </div>
 
       <!-- 重试按钮 -->
-      <div
+      <RetryButton
         v-if="(hasDownloadError || hasConfigError) && (currentStep === 1 || currentStep === 2)"
-        class="mt-2 flex items-center justify-center"
-      >
-        <button
-          :disabled="isRetrying"
-          class="btn btn-xs btn-primary btn-ghost"
-          :class="{ loading: isRetrying }"
-          @click="handleRetry()"
-        >
-          <span v-if="!isRetrying">
-            {{
-              hasDownloadError
-                ? $t('splash.buttons.retryDownload')
-                : $t('splash.buttons.retryConfig')
-            }}
-          </span>
-          <span v-else>
-            {{
-              hasDownloadError
-                ? $t('splash.buttons.retryingDownload')
-                : $t('splash.buttons.retryingConfig')
-            }}
-          </span>
-        </button>
-      </div>
+        :disabled="isRetrying"
+        :is-loading="isRetrying"
+        :text="
+          hasDownloadError ? $t('splash.buttons.retryDownload') : $t('splash.buttons.retryConfig')
+        "
+        :loading-text="
+          hasDownloadError
+            ? $t('splash.buttons.retryingDownload')
+            : $t('splash.buttons.retryingConfig')
+        "
+        @click="handleRetry"
+      />
 
       <!-- 状态信息 -->
       <div v-else class="text-center">
@@ -323,6 +168,8 @@ import {
   getBackgroundRemovalProcessor,
   type ModelDownloadProgress
 } from '@renderer/processors/background-removal'
+import StepItem from '@renderer/components/splash-screen/StepItem.vue'
+import RetryButton from '@renderer/components/splash-screen/RetryButton.vue'
 
 // 扩展的下载进度接口，包含错误信息
 interface ExtendedModelDownloadProgress extends ModelDownloadProgress {
@@ -341,8 +188,8 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<{
-  complete: []
-  stepChanged: [step: number]
+  (e: 'complete'): void
+  (e: 'stepChanged', step: number): void
 }>()
 
 // 响应式数据
@@ -689,6 +536,48 @@ const handleRetry = async (): Promise<void> => {
     await retryDownload()
   } else if (hasConfigError.value) {
     await retryConfig()
+  }
+}
+
+// 获取环境步骤图标状态
+const getEnvironmentStepIconStatus = ():
+  | 'success'
+  | 'error'
+  | 'in-progress'
+  | 'waiting'
+  | 'default' => {
+  if (currentStep.value > 0) {
+    return 'success'
+  } else if (currentStep.value === 0) {
+    return 'in-progress'
+  } else {
+    return 'waiting'
+  }
+}
+
+// 获取模型步骤图标状态
+const getModelStepIconStatus = (): 'success' | 'error' | 'in-progress' | 'waiting' | 'default' => {
+  if (currentStep.value > 1) {
+    return 'success'
+  } else if (hasDownloadError.value || hasConfigError.value) {
+    return 'error'
+  } else if (currentStep.value === 1) {
+    return 'in-progress'
+  } else {
+    return 'waiting'
+  }
+}
+
+// 获取配置步骤图标状态
+const getConfigStepIconStatus = (): 'success' | 'error' | 'in-progress' | 'waiting' | 'default' => {
+  if (currentStep.value > 2) {
+    return 'success'
+  } else if (currentStep.value === 2 && hasConfigError.value) {
+    return 'error'
+  } else if (currentStep.value === 2) {
+    return 'in-progress'
+  } else {
+    return 'waiting'
   }
 }
 
