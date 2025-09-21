@@ -170,6 +170,8 @@ import {
 } from '@renderer/processors/background-removal'
 import StepItem from '@renderer/components/splash-screen/StepItem.vue'
 import RetryButton from '@renderer/components/splash-screen/RetryButton.vue'
+import { detectWebGPUSupport } from '@renderer/utils/gpu-detection'
+import { settingModule } from '@renderer/components/setting'
 
 // 扩展的下载进度接口，包含错误信息
 interface ExtendedModelDownloadProgress extends ModelDownloadProgress {
@@ -272,43 +274,6 @@ const handleModelDownloadProgress = (progress: ExtendedModelDownloadProgress): v
         continueToConfigStep()
       }
     }, 500)
-  } else if (progress.status === 'error') {
-    // 模型相关错误，需要检查模型下载状态来分类错误
-    console.error('模型相关错误:', progress.errorMessage)
-
-    // 检查模型是否已下载来决定错误类型
-    window.api.model
-      .isDownloaded('Briaai')
-      .then((modelIsDownloaded) => {
-        console.log(`下载进度错误时模型状态: ${modelIsDownloaded ? '已下载' : '未下载'}`)
-
-        if (modelIsDownloaded) {
-          // 模型已下载但出现错误 = 配置错误
-          console.log('模型已下载，归类为配置失败')
-          hasConfigError.value = true
-          hasDownloadError.value = false
-          // 设置当前步骤为配置步骤，但不自动继续
-          currentStep.value = 2
-          emit('stepChanged', 2)
-        } else {
-          // 模型未下载且出现错误 = 下载错误
-          console.log('模型未下载，归类为下载失败')
-          hasDownloadError.value = true
-          hasConfigError.value = false
-          // 保持在步骤1，显示下载错误
-          currentStep.value = 1
-          emit('stepChanged', 1)
-        }
-      })
-      .catch((checkError) => {
-        console.warn('检查模型下载状态失败:', checkError)
-        // 如果检查失败，默认归类为下载错误
-        hasDownloadError.value = true
-        hasConfigError.value = false
-        // 保持在步骤1，显示下载错误
-        currentStep.value = 1
-        emit('stepChanged', 1)
-      })
   }
 }
 
@@ -388,18 +353,6 @@ const initializeModel = async (): Promise<void> => {
     if (currentStep.value !== 1 || hasDownloadError.value || hasConfigError.value) {
       return
     }
-
-    // 首先检查模型是否已下载
-    let modelIsDownloaded = false
-    try {
-      modelIsDownloaded = await window.api.model.isDownloaded('Briaai')
-      console.log(`模型下载状态检查: ${modelIsDownloaded ? '已下载' : '未下载'}`)
-    } catch (checkError) {
-      console.warn('检查模型下载状态失败:', checkError)
-      // 如果检查失败，默认认为未下载
-      modelIsDownloaded = false
-    }
-
     const processor = getBackgroundRemovalProcessor()
     processor.setDownloadProgressCallback(handleModelDownloadProgress)
 
@@ -408,15 +361,7 @@ const initializeModel = async (): Promise<void> => {
     console.error('模型初始化失败:', error)
 
     // 重新检查模型下载状态来分类错误（防止状态在初始化过程中改变）
-    let modelIsDownloaded = false
-    try {
-      modelIsDownloaded = await window.api.model.isDownloaded('Briaai')
-      console.log(`错误发生时模型状态: ${modelIsDownloaded ? '已下载' : '未下载'}`)
-    } catch (checkError) {
-      console.warn('检查模型下载状态失败:', checkError)
-      // 如果检查失败，默认认为未下载
-      modelIsDownloaded = false
-    }
+    let modelIsDownloaded = downloadedMB.value === totalMB.value
 
     if (modelIsDownloaded) {
       // 模型已下载但初始化失败 = 配置错误
@@ -466,9 +411,22 @@ const startupProcess = async (): Promise<void> => {
     hasDownloadError.value = false
     hasConfigError.value = false
 
-    // 步骤1: 环境检测
-    setTimeout(() => {
+    // 步骤1: 环境检测 - 检测 GPU 支持情况
+    setTimeout(async () => {
       if (!hasDownloadError.value && !hasConfigError.value) {
+        console.log('开始检测 GPU 支持情况...')
+        const gpuSupported = await detectWebGPUSupport()
+        console.log('GPU 支持情况:', gpuSupported)
+
+        // 将 GPU 支持情况写入设置
+        try {
+          await settingModule.set('enableGPU', gpuSupported)
+          console.log('GPU 设置已保存:', gpuSupported)
+        } catch (error) {
+          console.error('保存 GPU 设置失败:', error)
+        }
+
+        // 进入下一步
         currentStep.value = 1
         emit('stepChanged', 1)
 
