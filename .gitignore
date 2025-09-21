@@ -5,3 +5,6 @@ out
 .eslintcache
 .model-cache
 *.log*
+public/
+src/public/
+src/renderer/public/

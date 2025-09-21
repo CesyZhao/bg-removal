@@ -119,7 +119,8 @@ export class BackgroundRemovalProcessor {
       if (modelType === 'Briaai') {
         // RMBG-1.4 使用 AutoModel 方式加载
         this.segmentationPipeline = await AutoModel.from_pretrained('briaai/RMBG-1.4', {
-          device
+          device,
+          config: { model_type: 'custom' }
         })
         console.log(`RMBG-1.4 模型从public目录加载完成，使用设备: ${device}`)
       } else if (modelType === 'Xenova') {

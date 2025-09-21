@@ -16,7 +16,7 @@ export async function configureLocalModels(modelType: 'Briaai' | 'Xenova'): Prom
     env.allowLocalModels = true
     env.allowRemoteModels = false
     // console.log(env)
-    // env.localModelPath = 'bg-removal/src/renderer/public/models/'
+    // env.localModelPath = '/public/models/'
 
     console.log('配置 Transformers.js 使用本地模型:', {
       modelType,
