@@ -1,35 +1,39 @@
-import { MenuKey } from './menu'
+/**
+ * 模型相关类型定义
+ */
 
-export enum ModelKey {
-  Briaai = 'briaai/RMBG-1.4',
-  Xenova = 'Xenova/modnet',
-  Janus = 'onnx-community/Janus-Pro-1B-ONNX'
-}
+// 模型类型
+export type ModelType = 'Briaai' | 'Xenova'
 
-export const MenuModelMap = new Map<MenuKey, ModelKey[]>([
-  [MenuKey.RemoveBackground, [ModelKey.Xenova, ModelKey.Briaai]]
-])
-
-export interface ModelStatus {
-  menuKey: MenuKey
-  modelKey: ModelKey
-  download: boolean
-}
-
+// 模型配置
 export interface ModelConfig {
-  modelName: ModelKey
-  files: string[]
+  id: string
+  name: string
+  type: string
 }
 
-export type DeviceType =
-  | 'auto'
-  | 'gpu'
-  | 'cpu'
-  | 'wasm'
-  | 'webgpu'
-  | 'cuda'
-  | 'dml'
-  | 'webnn'
-  | 'webnn-npu'
-  | 'webnn-gpu'
-  | 'webnn-cpu'
+// 模型下载进度
+export interface ModelDownloadProgress {
+  modelName: string
+  progress: number
+  loaded: number
+  total: number
+  currentFile?: string
+  status: 'downloading' | 'completed' | 'error' | 'pending'
+  completedFiles: number
+  totalFiles: number
+}
+
+// 模型信息
+export interface ModelInfo extends ModelConfig {
+  downloaded: boolean
+  downloading: boolean
+  modelPath: string
+  cacheDir: string
+}
+
+// 模型下载进度事件
+export interface ModelDownloadProgressEvent {
+  modelType: ModelType
+  progress: ModelDownloadProgress
+}

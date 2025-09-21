@@ -2,6 +2,7 @@ import { app, shell, BrowserWindow, ipcMain, session } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { initializeModelManager } from './model-manager'
 
 function createWindow(): void {
   // Create the browser window.
@@ -45,6 +46,8 @@ function createWindow(): void {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
+  // 初始化模型管理器
+  initializeModelManager()
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.electron')
 
@@ -61,13 +64,13 @@ app.whenReady().then(() => {
     })
   })
 
-  // 配置 CSP 以允许模型下载
+  // 配置 CSP 以允许模型下载和脚本加载
   ses.webRequest.onHeadersReceived((details, callback) => {
     callback({
       responseHeaders: {
         ...details.responseHeaders,
         'Content-Security-Policy': [
-          `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://huggingface.co https://hf-mirror.com https://cdn-lfs.huggingface.co https://cdn-lfs.hf-mirror.com; object-src 'none'; base-uri 'self';`
+          `default-src 'self'; script-src 'self' 'unsafe-eval' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://huggingface.co https://hf-mirror.com https://cdn-lfs.huggingface.co https://cdn-lfs.hf-mirror.com https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'; worker-src 'self' blob:;`
         ]
       }
     })

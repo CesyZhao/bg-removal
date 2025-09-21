@@ -128,12 +128,12 @@ export default {
         completed: '系统兼容性和资源检查完成。'
       },
       model: {
-        title: '模型下载',
-        description: '正在下载最新的背景移除模型。({0})',
+        title: '模型下载和配置',
+        description: '正在下载和配置最新的背景移除模型。({0})',
         progress: '{0}MB',
         waiting: '等待开始下载...',
         downloading: '正在下载背景移除模型...',
-        completed: '模型下载完成。'
+        completed: '模型下载和配置完成。'
       },
       config: {
         title: '应用配置',
@@ -148,7 +148,15 @@ export default {
       ready: '准备就绪！',
       allCompleted: '所有步骤已完成，应用程序即将启动...',
       networkError: '网络连接失败，正在重试...',
-      downloadError: '模型下载失败，请检查网络连接'
+      downloadError: '模型下载失败，请检查网络连接',
+      modelDownloadFailed: '模型下载失败',
+      modelConfigFailed: '模型配置失败'
+    },
+    buttons: {
+      retryDownload: '重试下载',
+      retryConfig: '重新配置',
+      retryingDownload: '重新下载中...',
+      retryingConfig: '重新配置中...'
     }
   }
 }

@@ -152,7 +152,15 @@ export default {
       ready: 'Ready to go!',
       allCompleted: 'All steps completed, application will start soon...',
       networkError: 'Network connection failed, retrying...',
-      downloadError: 'Model download failed, please check your network connection'
+      downloadError: 'Model download failed, please check your network connection',
+      modelDownloadFailed: 'Model download failed',
+      modelConfigFailed: 'Model configuration failed'
+    },
+    buttons: {
+      retryDownload: 'Retry Download',
+      retryConfig: 'Retry Configuration',
+      retryingDownload: 'Retrying download...',
+      retryingConfig: 'Retrying configuration...'
     }
   }
 }

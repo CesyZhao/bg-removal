@@ -14,6 +14,8 @@ export enum BridgeEvent {
   MODEL_CANCEL_DOWNLOAD = 'model:cancelDownload',
   MODEL_GET_DOWNLOAD_PROGRESS = 'model:getDownloadProgress',
   MODEL_DOWNLOAD_PROGRESS = 'model:downloadProgress',
+  MODEL_GET_INFO = 'model:getInfo',
+  MODEL_PROCESS_IMAGE = 'model:processImage',
 
   // 文件相关事件
   FILE_SELECT_FOLDER = 'file:selectFolder',

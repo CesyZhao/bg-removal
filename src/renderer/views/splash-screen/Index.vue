@@ -101,7 +101,7 @@
           </div>
         </div>
 
-        <!-- 模型下载 -->
+        <!-- 模型下载和配置 -->
         <div class="flex items-center gap-3 transition-all duration-300">
           <div class="step-icon flex-shrink-0">
             <div
@@ -124,6 +124,25 @@
               </svg>
             </div>
             <div
+              v-else-if="hasDownloadError || hasConfigError"
+              class="w-6 h-6 bg-gradient-to-br from-error to-error-focus rounded-full flex items-center justify-center shadow-sm transition-all duration-300"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-4 h-4 text-error-content"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </div>
+            <div
               v-else-if="currentStep === 1"
               class="w-6 h-6 border-2 border-primary rounded-full flex items-center justify-center relative"
             >
@@ -138,9 +157,29 @@
                 {{ $t('splash.steps.model.title') }}
               </h3>
             </div>
-            <p class="text-base-content/60 text-xs leading-relaxed mb-2">
+            <p
+              class="text-base-content/60 text-xs leading-relaxed mb-2 overflow-hidden text-ellipsis whitespace-nowrap"
+            >
               <span v-if="currentStep < 1">{{ $t('splash.steps.model.waiting') }}</span>
-              <span v-else-if="currentStep === 1">{{ $t('splash.steps.model.downloading') }}</span>
+              <span v-else-if="currentStep === 1 || currentStep === 2">
+                <span v-if="hasDownloadError" class="text-error">{{
+                  $t('splash.status.modelDownloadFailed')
+                }}</span>
+                <span v-else-if="hasConfigError" class="text-error">{{
+                  $t('splash.status.modelConfigFailed')
+                }}</span>
+                <span v-else-if="currentStep === 1">
+                  <span v-if="modelProgress > 0">
+                    {{ $t('splash.steps.model.downloading') }}
+                    <span class="text-xs text-base-content/50">
+                      {{ modelProgress }}%
+                      <span v-if="totalMB > 0">({{ downloadedMB }}MB / {{ totalMB }}MB)</span>
+                    </span>
+                  </span>
+                  <span v-else>{{ $t('splash.steps.model.completed') }}</span>
+                </span>
+                <span v-else>{{ $t('splash.steps.model.completed') }}</span>
+              </span>
               <span v-else>{{ $t('splash.steps.model.completed') }}</span>
             </p>
           </div>
@@ -169,6 +208,25 @@
               </svg>
             </div>
             <div
+              v-else-if="currentStep === 2 && hasConfigError"
+              class="w-6 h-6 bg-gradient-to-br from-error to-error-focus rounded-full flex items-center justify-center shadow-sm transition-all duration-300"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="w-4 h-4 text-error-content"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </div>
+            <div
               v-else-if="currentStep === 2"
               class="w-6 h-6 border-2 border-primary rounded-full flex items-center justify-center"
             >
@@ -182,6 +240,9 @@
             </h3>
             <p class="text-base-content/60 text-xs leading-relaxed">
               <span v-if="currentStep < 2">{{ $t('splash.steps.config.waiting') }}</span>
+              <span v-else-if="currentStep === 2 && hasConfigError" class="text-error">{{
+                $t('splash.status.modelConfigFailed')
+              }}</span>
               <span v-else-if="currentStep === 2">{{ $t('splash.steps.config.description') }}</span>
               <span v-else>{{ $t('splash.steps.config.completed') }}</span>
             </p>
@@ -205,8 +266,36 @@
         </div>
       </div>
 
+      <!-- 重试按钮 -->
+      <div
+        v-if="(hasDownloadError || hasConfigError) && (currentStep === 1 || currentStep === 2)"
+        class="mt-2 flex items-center justify-center"
+      >
+        <button
+          :disabled="isRetrying"
+          class="btn btn-xs btn-primary btn-ghost"
+          :class="{ loading: isRetrying }"
+          @click="handleRetry()"
+        >
+          <span v-if="!isRetrying">
+            {{
+              hasDownloadError
+                ? $t('splash.buttons.retryDownload')
+                : $t('splash.buttons.retryConfig')
+            }}
+          </span>
+          <span v-else>
+            {{
+              hasDownloadError
+                ? $t('splash.buttons.retryingDownload')
+                : $t('splash.buttons.retryingConfig')
+            }}
+          </span>
+        </button>
+      </div>
+
       <!-- 状态信息 -->
-      <div class="text-center">
+      <div v-else class="text-center">
         <div class="flex items-center justify-center gap-1 mb-1">
           <div class="w-1 h-1 bg-primary rounded-full animate-bounce"></div>
           <div
@@ -236,6 +325,11 @@ import {
   type ModelDownloadProgress
 } from '@renderer/processors/background-removal'
 
+// 扩展的下载进度接口，包含错误信息
+interface ExtendedModelDownloadProgress extends ModelDownloadProgress {
+  errorMessage?: string
+}
+
 const { t } = useI18n()
 
 // 定义 Props 和 Emits
@@ -260,14 +354,55 @@ const isCompleted = ref(false)
 const modelName = ref('')
 const downloadedMB = ref(0)
 const totalMB = ref(0)
+const hasDownloadError = ref(false)
+const hasConfigError = ref(false)
+const isRetrying = ref(false)
 
 // 计算进度百分比
 const progress = computed(() => {
-  return Math.min((currentStep.value / 3) * 100, 100)
+  // 如果有错误，停留在当前步骤的进度，不再前进
+  if (hasDownloadError.value || hasConfigError.value) {
+    switch (currentStep.value) {
+      case 0:
+        return 5 // 环境检测阶段出错
+      case 1:
+        return Math.max(10, Math.min(10 + modelProgress.value * 0.7, 80)) // 模型下载阶段出错
+      case 2:
+        return 85 // 配置阶段出错
+      default:
+        return Math.min((currentStep.value / 3) * 100, 100)
+    }
+  }
+
+  // 正常流程的进度计算
+  let baseProgress = 0
+
+  switch (currentStep.value) {
+    case 0:
+      // 环境检测阶段: 0-10%
+      baseProgress = 10
+      break
+    case 1:
+      // 模型下载和配置阶段: 10-80% (模型下载占大部分时间)
+      baseProgress = 10 + modelProgress.value * 0.7 // 70% 的进度空间给模型下载
+      break
+    case 2:
+      // 应用配置阶段: 80-95%
+      baseProgress = 85
+      break
+    case 3:
+      // 完成阶段: 95-100%
+      baseProgress = 100
+      break
+    default:
+      baseProgress = Math.min((currentStep.value / 3) * 100, 100)
+  }
+
+  return Math.min(Math.round(baseProgress), 100)
 })
 
 // 处理模型下载进度
-const handleModelDownloadProgress = (progress: ModelDownloadProgress): void => {
+const handleModelDownloadProgress = (progress: ExtendedModelDownloadProgress): void => {
   modelProgress.value = progress.progress
   modelName.value = progress.modelName
   downloadedMB.value = Math.round(progress.loaded / (1024 * 1024))
@@ -277,15 +412,193 @@ const handleModelDownloadProgress = (progress: ModelDownloadProgress): void => {
 
   if (progress.status === 'completed') {
     // 模型下载完成，进入下一步
+    hasDownloadError.value = false
+    hasConfigError.value = false
+
     setTimeout(() => {
-      currentStep.value = 2
-      emit('stepChanged', 2)
+      // 再次检查是否有错误，确保在延迟期间没有出现错误
+      // 同时检查当前步骤是否仍然是1（模型下载步骤）
+      if (!hasDownloadError.value && !hasConfigError.value && currentStep.value === 1) {
+        currentStep.value = 2
+        emit('stepChanged', 2)
+
+        // 继续应用配置步骤
+        continueToConfigStep()
+      }
     }, 500)
+  } else if (progress.status === 'error') {
+    // 模型相关错误，需要检查模型下载状态来分类错误
+    console.error('模型相关错误:', progress.errorMessage)
+
+    // 检查模型是否已下载来决定错误类型
+    window.api.model
+      .isDownloaded('Briaai')
+      .then((modelIsDownloaded) => {
+        console.log(`下载进度错误时模型状态: ${modelIsDownloaded ? '已下载' : '未下载'}`)
+
+        if (modelIsDownloaded) {
+          // 模型已下载但出现错误 = 配置错误
+          console.log('模型已下载，归类为配置失败')
+          hasConfigError.value = true
+          hasDownloadError.value = false
+          // 设置当前步骤为配置步骤，但不自动继续
+          currentStep.value = 2
+          emit('stepChanged', 2)
+        } else {
+          // 模型未下载且出现错误 = 下载错误
+          console.log('模型未下载，归类为下载失败')
+          hasDownloadError.value = true
+          hasConfigError.value = false
+          // 保持在步骤1，显示下载错误
+          currentStep.value = 1
+          emit('stepChanged', 1)
+        }
+      })
+      .catch((checkError) => {
+        console.warn('检查模型下载状态失败:', checkError)
+        // 如果检查失败，默认归类为下载错误
+        hasDownloadError.value = true
+        hasConfigError.value = false
+        // 保持在步骤1，显示下载错误
+        currentStep.value = 1
+        emit('stepChanged', 1)
+      })
+  }
+}
+
+// 继续到配置步骤
+const continueToConfigStep = async (): Promise<void> => {
+  // 检查是否有错误，如果有错误则不继续
+  if (hasDownloadError.value || hasConfigError.value) {
+    console.log('存在错误，停止继续配置步骤', {
+      hasDownloadError: hasDownloadError.value,
+      hasConfigError: hasConfigError.value
+    })
+    return
+  }
+
+  try {
+    console.log('开始应用配置...')
+
+    // 模拟配置过程（实际项目中这里应该是真实的配置逻辑）
+    await new Promise((resolve, reject) => {
+      setTimeout(() => {
+        // 检查是否有配置错误（这里可以添加真实的配置检查逻辑）
+        const configSuccess = true // 模拟配置成功
+
+        if (configSuccess) {
+          resolve(true)
+        } else {
+          reject(new Error('应用配置失败'))
+        }
+      }, 1000)
+    })
+
+    // 再次检查是否有错误，确保在异步操作期间没有出现错误
+    if (hasDownloadError.value || hasConfigError.value) {
+      console.log('存在错误，停止继续配置步骤', {
+        hasDownloadError: hasDownloadError.value,
+        hasConfigError: hasConfigError.value
+      })
+      return
+    }
+
+    // 配置成功，检查是否没有错误后继续下一步
+    if (currentStep.value === 2 && !hasDownloadError.value && !hasConfigError.value) {
+      currentStep.value = 3
+      emit('stepChanged', 3)
+
+      // 完成启动
+      setTimeout(() => {
+        // 最后检查是否有错误，确保在延迟期间没有出现错误
+        if (currentStep.value === 3 && !hasDownloadError.value && !hasConfigError.value) {
+          isCompleted.value = true
+          emit('complete')
+          props.onComplete?.()
+        }
+      }, 1500)
+    } else {
+      // 如果有错误，停留在配置步骤不继续
+      console.log('存在错误，停留在配置步骤', {
+        hasDownloadError: hasDownloadError.value,
+        hasConfigError: hasConfigError.value
+      })
+    }
+  } catch (error) {
+    // 配置失败，停留在当前步骤
+    console.error('应用配置失败:', error)
+    hasConfigError.value = true
+    hasDownloadError.value = false
+    // 确保步骤停留在步骤2
+    currentStep.value = 2
+    emit('stepChanged', 2)
+  }
+}
+
+// 初始化模型
+const initializeModel = async (): Promise<void> => {
+  try {
+    // 确保在正确的步骤且没有错误时才初始化
+    if (currentStep.value !== 1 || hasDownloadError.value || hasConfigError.value) {
+      return
+    }
+
+    // 首先检查模型是否已下载
+    let modelIsDownloaded = false
+    try {
+      modelIsDownloaded = await window.api.model.isDownloaded('Briaai')
+      console.log(`模型下载状态检查: ${modelIsDownloaded ? '已下载' : '未下载'}`)
+    } catch (checkError) {
+      console.warn('检查模型下载状态失败:', checkError)
+      // 如果检查失败，默认认为未下载
+      modelIsDownloaded = false
+    }
+
+    const processor = getBackgroundRemovalProcessor()
+    processor.setDownloadProgressCallback(handleModelDownloadProgress)
+
+    await processor.initialize()
+  } catch (error) {
+    console.error('模型初始化失败:', error)
+
+    // 重新检查模型下载状态来分类错误（防止状态在初始化过程中改变）
+    let modelIsDownloaded = false
+    try {
+      modelIsDownloaded = await window.api.model.isDownloaded('Briaai')
+      console.log(`错误发生时模型状态: ${modelIsDownloaded ? '已下载' : '未下载'}`)
+    } catch (checkError) {
+      console.warn('检查模型下载状态失败:', checkError)
+      // 如果检查失败，默认认为未下载
+      modelIsDownloaded = false
+    }
+
+    if (modelIsDownloaded) {
+      // 模型已下载但初始化失败 = 配置错误
+      console.log('模型已下载，归类为配置失败')
+      hasConfigError.value = true
+      hasDownloadError.value = false
+    } else {
+      // 模型未下载且初始化失败 = 下载错误
+      console.log('模型未下载，归类为下载失败')
+      hasDownloadError.value = true
+      hasConfigError.value = false
+    }
+
+    // 确保在出现错误时不继续下一步
+    return
   }
 }
 
 // 获取当前步骤的状态消息
 const getCurrentStepMessage = (): string => {
+  if (hasDownloadError.value) {
+    return t('splash.status.modelDownloadFailed')
+  }
+
+  if (hasConfigError.value) {
+    return t('splash.status.modelConfigFailed')
+  }
+
   switch (currentStep.value) {
     case 0:
       return t('splash.status.initializing')
@@ -303,48 +616,80 @@ const getCurrentStepMessage = (): string => {
 // 启动流程
 const startupProcess = async (): Promise<void> => {
   try {
+    // 重置所有错误状态
+    hasDownloadError.value = false
+    hasConfigError.value = false
+
     // 步骤1: 环境检测
     setTimeout(() => {
-      currentStep.value = 1
-      emit('stepChanged', 1)
+      if (!hasDownloadError.value && !hasConfigError.value) {
+        currentStep.value = 1
+        emit('stepChanged', 1)
 
-      // 开始模型初始化
-      initializeModel()
-    }, 800)
-
-    // 步骤3: 应用配置（在模型下载完成后会自动触发步骤2）
-    setTimeout(() => {
-      if (currentStep.value >= 2) {
-        currentStep.value = 3
-        emit('stepChanged', 3)
+        // 开始模型初始化
+        initializeModel()
       }
-    }, 6000)
-
-    // 完成启动
-    setTimeout(() => {
-      isCompleted.value = true
-      emit('complete')
-      props.onComplete?.()
-    }, 7500)
+    }, 800)
   } catch (error) {
     console.error('启动流程失败:', error)
+    hasDownloadError.value = true
   }
 }
 
-// 初始化模型
-const initializeModel = async (): Promise<void> => {
-  try {
-    const processor = getBackgroundRemovalProcessor()
-    processor.setDownloadProgressCallback(handleModelDownloadProgress)
+// 重试下载
+const retryDownload = async (): Promise<void> => {
+  if (isRetrying.value) return
 
-    await processor.initialize()
+  isRetrying.value = true
+  hasDownloadError.value = false
+  modelProgress.value = 0
+
+  try {
+    await initializeModel()
   } catch (error) {
-    console.error('模型初始化失败:', error)
-    // 即使模型初始化失败，也继续后续步骤
-    setTimeout(() => {
-      currentStep.value = 2
-      emit('stepChanged', 2)
-    }, 1000)
+    console.error('重试失败:', error)
+  } finally {
+    isRetrying.value = false
+  }
+}
+
+// 重试配置
+const retryConfig = async (): Promise<void> => {
+  if (isRetrying.value) return
+
+  isRetrying.value = true
+  hasConfigError.value = false
+
+  try {
+    // 模型配置失败的重试应该重新初始化模型，而不是只重试应用配置
+    // 因为模型配置失败意味着模型文件可能损坏或初始化有问题
+
+    // 先清理可能损坏的模型文件
+    try {
+      await window.api.model.cleanup('Briaai')
+      console.log('已清理损坏的模型文件')
+    } catch (cleanupError) {
+      console.warn('清理模型文件失败:', cleanupError)
+    }
+
+    // 重新初始化模型
+    await initializeModel()
+  } catch (error) {
+    console.error('重试配置失败:', error)
+    // 重试失败后重新设置错误状态
+    hasConfigError.value = true
+    hasDownloadError.value = false
+  } finally {
+    isRetrying.value = false
+  }
+}
+
+// 统一处理重试逻辑
+const handleRetry = async (): Promise<void> => {
+  if (hasDownloadError.value) {
+    await retryDownload()
+  } else if (hasConfigError.value) {
+    await retryConfig()
   }
 }
 
