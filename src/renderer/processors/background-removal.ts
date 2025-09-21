@@ -1,7 +1,13 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { AutoProcessor, AutoModel, RawImage } from '@huggingface/transformers'
+import { AutoProcessor, AutoModel, RawImage, env } from '@huggingface/transformers'
 import { settingModule } from '@renderer/components/setting'
 import { checkModelAvailability, getRecommendedModelType } from '../utils/model-config'
+
+env.allowLocalModels = true
+env.allowRemoteModels = false
+env.localModelPath = './public/models'
+
+console.log(env)
 
 // 模型类型定义
 type ModelType = 'Briaai' | 'Xenova'

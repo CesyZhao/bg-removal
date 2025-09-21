@@ -179,6 +179,7 @@
                 </span>
                 <span v-else>{{ $t('splash.steps.model.completed') }}</span>
               </span>
+              <span v-else>{{ $t('splash.steps.model.completed') }}</span>
             </p>
           </div>
         </div>
