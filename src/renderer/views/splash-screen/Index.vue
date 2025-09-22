@@ -73,15 +73,15 @@
         <!-- 模型下载和配置 -->
         <StepItem :title="$t('splash.steps.model.title')" :icon-status="getModelStepIconStatus()">
           <span v-if="currentStep < 1">{{ $t('splash.steps.model.waiting') }}</span>
-          <span v-else-if="currentStep === 1 || currentStep === 2">
+          <span v-else-if="currentStep === 1">
             <span v-if="hasDownloadError" class="text-error">{{
               $t('splash.status.modelDownloadFailed')
             }}</span>
             <span v-else-if="hasConfigError" class="text-error">{{
               $t('splash.status.modelConfigFailed')
             }}</span>
-            <span v-else-if="currentStep === 1">
-              <span v-if="modelProgress > 0">
+            <span v-else>
+              <span v-if="modelProgress >= 0">
                 {{ $t('splash.steps.model.downloading') }}
                 <span class="text-xs text-base-content/50">
                   {{ modelProgress }}%
@@ -90,7 +90,6 @@
               </span>
               <span v-else>{{ $t('splash.steps.model.completed') }}</span>
             </span>
-            <span v-else>{{ $t('splash.steps.model.completed') }}</span>
           </span>
           <span v-else>{{ $t('splash.steps.model.completed') }}</span>
         </StepItem>

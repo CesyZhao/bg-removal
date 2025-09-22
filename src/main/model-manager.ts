@@ -149,7 +149,7 @@ export class ModelManager {
   }
 
   /**
-   * 下载模型文件
+   * 下载模型文件（并行下载所有文件）
    */
   async downloadModel(modelType: ModelType): Promise<boolean> {
     const config = ModelFiles[modelType]
@@ -194,12 +194,17 @@ export class ModelManager {
         mkdirSync(publicModelDir, { recursive: true })
       }
 
-      // 逐个下载文件
-      let totalLoaded = 0
-      let totalSize = 0
+      // 准备所有文件下载信息（不预先获取文件大小）
+      const fileDownloads: Array<{
+        fileName: string
+        url: string
+        filePath: string
+        size: number
+        downloaded: number
+      }> = []
 
-      for (let i = 0; i < config.files.length; i++) {
-        const fileName = config.files[i]
+      // 初始化文件信息（大小暂时设为0，后续在下载过程中获取）
+      for (const fileName of config.files) {
         const publicFilePath = join(publicModelDir, fileName)
 
         // 确保文件所在的子目录存在
@@ -208,54 +213,111 @@ export class ModelManager {
           mkdirSync(publicFileDir, { recursive: true })
         }
 
-        console.log(`开始下载文件 ${i + 1}/${config.files.length}: ${fileName}`)
+        const currentUrl = `${this.getCurrentBaseURL()}/${config.id}/resolve/main/${fileName}`
+        console.log(`准备下载文件: ${currentUrl}`)
 
-        // 更新当前文件进度
-        this.updateProgress(modelType, {
-          modelName: config.name,
-          progress: Math.round((i / config.files.length) * 100),
-          loaded: totalLoaded,
-          total: totalSize,
-          currentFile: fileName,
-          status: 'downloading',
-          completedFiles: i,
-          totalFiles: config.files.length
+        fileDownloads.push({
+          fileName,
+          url: currentUrl,
+          filePath: publicFilePath,
+          size: 0, // 初始大小设为0，后续获取
+          downloaded: 0
         })
+      }
 
-        // 直接下载到public目录
-        try {
-          const currentUrl = `${this.getCurrentBaseURL()}/${config.id}/resolve/main/${fileName}`
-          console.log(`尝试下载: ${currentUrl}`)
+      // 初始化总大小和已下载大小
+      let totalSize = 0
+      let totalLoaded = 0
 
-          const fileSize = await this.downloadFile(currentUrl, publicFilePath, (loaded, total) => {
-            const currentProgress = Math.round(((i + loaded / total) / config.files.length) * 100)
+      // 通知初始进度
+      this.updateProgress(modelType, {
+        modelName: config.name,
+        progress: 0,
+        loaded: totalLoaded,
+        total: totalSize,
+        status: 'downloading',
+        completedFiles: 0,
+        totalFiles: config.files.length
+      })
+
+      // 并行下载所有文件，并在下载过程中获取文件大小
+      const downloadPromises = fileDownloads.map(async (fileInfo) => {
+        return new Promise<void>((resolve, reject) => {
+          this.downloadFile(fileInfo.url, fileInfo.filePath, (loaded, total) => {
+            // 第一次回调时获取到文件总大小
+            if (fileInfo.size === 0 && total > 0) {
+              fileInfo.size = total
+              // 更新总大小
+              totalSize = fileDownloads.reduce((sum, file) => sum + file.size, 0)
+            }
+
+            // 更新当前文件已下载大小
+            fileInfo.downloaded = loaded
+
+            // 计算总已下载大小
+            totalLoaded = fileDownloads.reduce((sum, file) => sum + file.downloaded, 0)
+
+            // 计算整体进度
+            const overallProgress = totalSize > 0 ? Math.round((totalLoaded / totalSize) * 100) : 0
+
+            // 通知进度更新
             this.updateProgress(modelType, {
               modelName: config.name,
-              progress: currentProgress,
-              loaded: totalLoaded + loaded,
-              total: totalSize + total,
-              currentFile: fileName,
+              progress: overallProgress,
+              loaded: totalLoaded,
+              total: totalSize,
+              currentFile: fileInfo.fileName,
               status: 'downloading',
-              completedFiles: i,
+              completedFiles: fileDownloads.filter((f) => f.downloaded === f.size && f.size > 0)
+                .length,
               totalFiles: config.files.length
             })
           })
+            .then(() => {
+              // 文件下载完成
+              // 重新计算已完成文件数和总进度
+              const completedFiles = fileDownloads.filter(
+                (f) => f.downloaded === f.size && f.size > 0
+              ).length
+              totalLoaded = fileDownloads.reduce((sum, file) => sum + file.downloaded, 0)
+              const overallProgress =
+                totalSize > 0 ? Math.round((totalLoaded / totalSize) * 100) : 0
 
-          totalLoaded += fileSize
-          totalSize += fileSize
-          console.log(`文件 ${fileName} 下载完成，大小: ${fileSize} 字节`)
-        } catch (error) {
-          console.error(`下载文件 ${fileName} 失败:`, error)
-          throw new Error(
-            `下载文件 ${fileName} 失败: ${error instanceof Error ? error.message : '未知错误'}`
-          )
-        }
-      }
+              this.updateProgress(modelType, {
+                modelName: config.name,
+                progress: overallProgress,
+                loaded: totalLoaded,
+                total: totalSize,
+                currentFile: fileInfo.fileName,
+                status: 'downloading',
+                completedFiles: completedFiles,
+                totalFiles: config.files.length
+              })
+
+              resolve()
+            })
+            .catch((error) => {
+              reject(error)
+            })
+        })
+      })
+
+      // 等待所有文件下载完成
+      await Promise.all(downloadPromises)
+
+      // 确保所有文件都标记为已完成
+      fileDownloads.forEach((fileInfo) => {
+        fileInfo.downloaded = fileInfo.size
+      })
+
+      // 重新计算总已下载大小和进度
+      totalLoaded = fileDownloads.reduce((sum, file) => sum + file.downloaded, 0)
+      const finalProgress = totalSize > 0 ? Math.round((totalLoaded / totalSize) * 100) : 100
 
       // 完成下载
       const completedProgress: ModelDownloadProgress = {
         modelName: config.name,
-        progress: 100,
+        progress: finalProgress,
         loaded: totalLoaded,
         total: totalSize,
         status: 'completed',
@@ -303,7 +365,7 @@ export class ModelManager {
     url: string,
     filePath: string,
     onProgress?: (loaded: number, total: number) => void
-  ): Promise<number> {
+  ): Promise<void> {
     return new Promise((resolve, reject) => {
       const request = url.startsWith('https') ? https : http
 
@@ -388,7 +450,7 @@ export class ModelManager {
 
             response.on('end', () => {
               writeStream.end()
-              resolve(downloadedSize)
+              resolve()
             })
 
             response.on('error', (error) => {
