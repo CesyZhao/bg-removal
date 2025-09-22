@@ -1,4 +1,5 @@
 import { SettingGroup } from '@renderer/definitions/setting'
+import { GPUSupportFlag } from '@renderer/utils/gpu-detection'
 
 // 在渲染进程中定义默认保存路径（不依赖 Node.js API）
 const getDefaultSavePath = (): string => {
@@ -78,6 +79,9 @@ export const defaultSettings: SettingGroup[] = [
         titleKey: 'settings.performance.enableGPU.title',
         descriptionKey: 'settings.performance.enableGPU.description',
         defaultValue: false,
+        enabled: () => {
+          return window[GPUSupportFlag]
+        },
         type: 'boolean',
         value: undefined
       }

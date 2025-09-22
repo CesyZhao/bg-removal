@@ -170,8 +170,7 @@ import {
 } from '@renderer/processors/background-removal'
 import StepItem from '@renderer/components/splash-screen/StepItem.vue'
 import RetryButton from '@renderer/components/splash-screen/RetryButton.vue'
-import { detectWebGPUSupport } from '@renderer/utils/gpu-detection'
-import { settingModule } from '@renderer/components/setting'
+import { detectWebGPUSupport, GPUSupportFlag } from '@renderer/utils/gpu-detection'
 
 // 扩展的下载进度接口，包含错误信息
 interface ExtendedModelDownloadProgress extends ModelDownloadProgress {
@@ -418,13 +417,7 @@ const startupProcess = async (): Promise<void> => {
         const gpuSupported = await detectWebGPUSupport()
         console.log('GPU 支持情况:', gpuSupported)
 
-        // 将 GPU 支持情况写入设置
-        try {
-          await settingModule.set('enableGPU', gpuSupported)
-          console.log('GPU 设置已保存:', gpuSupported)
-        } catch (error) {
-          console.error('保存 GPU 设置失败:', error)
-        }
+        window[GPUSupportFlag] = gpuSupported
 
         // 进入下一步
         currentStep.value = 1

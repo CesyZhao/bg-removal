@@ -7,6 +7,7 @@ export interface SettingItem {
   type: 'string' | 'boolean' | 'number' | 'select' | 'path'
   value: string | number | boolean | undefined
   options?: { value: string | number | boolean; label: string }[]
+  enabled?: () => boolean
 }
 
 export interface SettingOptions {

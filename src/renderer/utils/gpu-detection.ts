@@ -77,3 +77,5 @@ export async function getGPUSupportDetails(): Promise<{ supported: boolean; deta
     }
   }
 }
+
+export const GPUSupportFlag = '__is_gpu_supported__'

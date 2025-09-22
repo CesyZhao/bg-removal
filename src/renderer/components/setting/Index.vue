@@ -137,6 +137,7 @@
                         <input
                           v-model="setting.value"
                           type="checkbox"
+                          :disabled="setting.enabled ? !setting.enabled() : false"
                           class="toggle toggle-primary toggle-sm"
                           @change="handleValueChange(setting.key, setting.value)"
                         />
