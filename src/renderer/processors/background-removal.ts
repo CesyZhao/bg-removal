@@ -5,9 +5,7 @@ import { checkModelAvailability, getRecommendedModelType } from '../utils/model-
 
 env.allowLocalModels = true
 env.allowRemoteModels = false
-env.localModelPath = './public/models'
-
-console.log(env)
+// env.localModelPath = './public/models'
 
 // 模型类型定义
 type ModelType = 'Briaai' | 'Xenova'
@@ -118,7 +116,7 @@ export class BackgroundRemovalProcessor {
     try {
       // 获取模型public路径
       const publicPath = await window.api.model.getPublicPath(modelType)
-      console.log(`使用模型public路径: ${publicPath}`)
+      console.log(`使用模型public路径: ${publicPath}`, env)
 
       const device = this.isGPUEnabled ? 'webgpu' : 'wasm'
 

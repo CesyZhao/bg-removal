@@ -230,7 +230,15 @@ const progress = computed(() => {
       break
     case 1:
       // 模型下载和配置阶段: 10-80% (模型下载占大部分时间)
-      baseProgress = 10 + modelProgress.value * 0.7 // 70% 的进度空间给模型下载
+      // 调整计算方式，使模型下载进度能更好地映射到总进度
+      if (modelProgress.value >= 100) {
+        // 模型下载完成，进入配置阶段
+        baseProgress = 80
+      } else {
+        // 模型下载进行中，按比例计算进度 (10-75%)
+        baseProgress = 10 + Math.min(modelProgress.value * 0.65, 65)
+        console.log(modelProgress.value, baseProgress)
+      }
       break
     case 2:
       // 应用配置阶段: 80-95%

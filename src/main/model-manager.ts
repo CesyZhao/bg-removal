@@ -194,6 +194,10 @@ export class ModelManager {
         mkdirSync(publicModelDir, { recursive: true })
       }
 
+      // 初始化总大小和已下载大小
+      let totalSize = 0
+      let totalLoaded = 0
+
       // 准备所有文件下载信息（不预先获取文件大小）
       const fileDownloads: Array<{
         fileName: string
@@ -201,6 +205,7 @@ export class ModelManager {
         filePath: string
         size: number
         downloaded: number
+        started?: boolean // 添加started属性
       }> = []
 
       // 初始化文件信息（大小暂时设为0，后续在下载过程中获取）
@@ -221,68 +226,61 @@ export class ModelManager {
           url: currentUrl,
           filePath: publicFilePath,
           size: 0, // 初始大小设为0，后续获取
-          downloaded: 0
+          downloaded: 0,
+          started: false // 初始化started属性
         })
       }
 
-      // 初始化总大小和已下载大小
-      let totalSize = 0
-      let totalLoaded = 0
-
-      // 通知初始进度
-      this.updateProgress(modelType, {
-        modelName: config.name,
-        progress: 0,
-        loaded: totalLoaded,
-        total: totalSize,
-        status: 'downloading',
-        completedFiles: 0,
-        totalFiles: config.files.length
-      })
+      // 用于跟踪已开始下载的文件数量
+      let filesStarted = 0
+      const expectedFiles = config.files.length
+      let allFilesStarted = false
 
       // 并行下载所有文件，并在下载过程中获取文件大小
       const downloadPromises = fileDownloads.map(async (fileInfo) => {
         return new Promise<void>((resolve, reject) => {
           this.downloadFile(fileInfo.url, fileInfo.filePath, (loaded, total) => {
-            // 第一次回调时获取到文件总大小
-            if (fileInfo.size === 0 && total > 0) {
-              fileInfo.size = total
-              // 更新总大小
-              totalSize = fileDownloads.reduce((sum, file) => sum + file.size, 0)
+            // 标记文件已开始下载
+            if (!fileInfo.started) {
+              fileInfo.started = true
+              filesStarted++
+
+              // 检查是否所有文件都已开始下载
+              if (filesStarted === expectedFiles) {
+                allFilesStarted = true
+                // 所有文件都开始下载后，发送初始进度更新
+                this.updateProgress(modelType, {
+                  modelName: config.name,
+                  progress: 0,
+                  loaded: 0,
+                  total: 0,
+                  status: 'downloading',
+                  completedFiles: 0,
+                  totalFiles: config.files.length
+                })
+              }
             }
 
-            // 更新当前文件已下载大小
-            fileInfo.downloaded = loaded
+            // 只有在所有文件都开始下载后才更新进度
+            if (allFilesStarted) {
+              // 第一次回调时获取到文件总大小
+              if (fileInfo.size === 0 && total && total > 0) {
+                fileInfo.size = total
+                // 更新总大小
+                totalSize = fileDownloads.reduce((sum, file) => sum + file.size, 0)
+              }
 
-            // 计算总已下载大小
-            totalLoaded = fileDownloads.reduce((sum, file) => sum + file.downloaded, 0)
+              // 更新当前文件已下载大小
+              fileInfo.downloaded = loaded
 
-            // 计算整体进度
-            const overallProgress = totalSize > 0 ? Math.round((totalLoaded / totalSize) * 100) : 0
-
-            // 通知进度更新
-            this.updateProgress(modelType, {
-              modelName: config.name,
-              progress: overallProgress,
-              loaded: totalLoaded,
-              total: totalSize,
-              currentFile: fileInfo.fileName,
-              status: 'downloading',
-              completedFiles: fileDownloads.filter((f) => f.downloaded === f.size && f.size > 0)
-                .length,
-              totalFiles: config.files.length
-            })
-          })
-            .then(() => {
-              // 文件下载完成
-              // 重新计算已完成文件数和总进度
-              const completedFiles = fileDownloads.filter(
-                (f) => f.downloaded === f.size && f.size > 0
-              ).length
+              // 计算总已下载大小
               totalLoaded = fileDownloads.reduce((sum, file) => sum + file.downloaded, 0)
+
+              // 计算整体进度
               const overallProgress =
                 totalSize > 0 ? Math.round((totalLoaded / totalSize) * 100) : 0
 
+              // 通知进度更新
               this.updateProgress(modelType, {
                 modelName: config.name,
                 progress: overallProgress,
@@ -290,9 +288,35 @@ export class ModelManager {
                 total: totalSize,
                 currentFile: fileInfo.fileName,
                 status: 'downloading',
-                completedFiles: completedFiles,
+                completedFiles: fileDownloads.filter((f) => f.downloaded === f.size && f.size > 0)
+                  .length,
                 totalFiles: config.files.length
               })
+            }
+          })
+            .then(() => {
+              // 文件下载完成
+              // 只有在所有文件都开始下载后才更新进度
+              if (allFilesStarted) {
+                // 重新计算已完成文件数和总进度
+                const completedFiles = fileDownloads.filter(
+                  (f) => f.downloaded === f.size && f.size > 0
+                ).length
+                totalLoaded = fileDownloads.reduce((sum, file) => sum + file.downloaded, 0)
+                const overallProgress =
+                  totalSize > 0 ? Math.round((totalLoaded / totalSize) * 100) : 0
+
+                this.updateProgress(modelType, {
+                  modelName: config.name,
+                  progress: overallProgress,
+                  loaded: totalLoaded,
+                  total: totalSize,
+                  currentFile: fileInfo.fileName,
+                  status: 'downloading',
+                  completedFiles: completedFiles,
+                  totalFiles: config.files.length
+                })
+              }
 
               resolve()
             })
