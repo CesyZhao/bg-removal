@@ -32,6 +32,7 @@ import AppLogo from '@renderer/components/splash-screen/AppLogo.vue'
 // 控制页面显示状态
 const showSplashScreen = ref(true)
 const showMainView = ref(false)
+const ready = ref(false)
 
 // 计算 Logo 属性
 const logoSize = computed(() => {
@@ -39,14 +40,15 @@ const logoSize = computed(() => {
 })
 
 const logoPosition = computed(() => {
-  return showSplashScreen.value ? 'center' : 'top-left'
+  return ready.value ? 'top-left' : 'center'
 })
 
 // 处理启动屏完成事件
 const handleSplashComplete = (): void => {
   // 添加延迟以确保动画完成后再切换页面
-  showSplashScreen.value = false
+  ready.value = true
   setTimeout(() => {
+    showSplashScreen.value = false
     showMainView.value = true
   }, 300)
 }
