@@ -1,6 +1,6 @@
 <template>
   <div
-    class="splash-screen min-h-screen bg-gradient-to-br from-base-300 to-base-200 flex flex-col items-center justify-center px-6 relative overflow-hidden"
+    class="splash-screen min-h-screen bg-gradient-to-br from-base-300 to-base-200 flex flex-col items-center justify-center px-6 relative overflow-hidden pt-32"
   >
     <!-- 背景装饰 -->
     <div class="absolute inset-0 overflow-hidden">
@@ -13,37 +13,10 @@
       ></div>
     </div>
 
-    <!-- 应用图标和名称 -->
-    <div class="mb-6 text-center relative z-10">
-      <div class="flex items-center justify-center gap-2 mb-3">
-        <!-- 应用图标 -->
-        <div
-          class="w-12 h-12 bg-gradient-to-br from-primary to-primary-focus rounded-xl flex items-center justify-center shadow-lg transition-all duration-300"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            class="w-7 h-7 text-primary-content drop-shadow-sm"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-            />
-          </svg>
-        </div>
-        <h1 class="text-2xl font-bold text-base-content tracking-tight">
-          {{ $t('splash.appName') }}
-        </h1>
-      </div>
-    </div>
-
     <!-- 主内容卡片 -->
     <div
-      class="bg-base-100/90 backdrop-blur-xl rounded-2xl shadow-xl p-6 w-full max-w-md border border-base-200/50 relative z-10 transition-all duration-300"
+      class="bg-base-100/90 backdrop-blur-xl rounded-2xl shadow-xl p-6 w-full max-w-md border border-base-200/50 relative z-10 transition-all duration-200"
+      :class="{ 'translate-y-200': isCompleted }"
     >
       <!-- 标题 -->
       <div class="text-center mb-6">
@@ -73,15 +46,15 @@
         <!-- 模型下载和配置 -->
         <StepItem :title="$t('splash.steps.model.title')" :icon-status="getModelStepIconStatus()">
           <span v-if="currentStep < 1">{{ $t('splash.steps.model.waiting') }}</span>
-          <span v-else-if="currentStep === 1">
+          <span v-else-if="currentStep === 1 || currentStep === 2">
             <span v-if="hasDownloadError" class="text-error">{{
               $t('splash.status.modelDownloadFailed')
             }}</span>
             <span v-else-if="hasConfigError" class="text-error">{{
               $t('splash.status.modelConfigFailed')
             }}</span>
-            <span v-else>
-              <span v-if="modelProgress >= 0">
+            <span v-else-if="currentStep === 1">
+              <span v-if="modelProgress > 0">
                 {{ $t('splash.steps.model.downloading') }}
                 <span class="text-xs text-base-content/50">
                   {{ modelProgress }}%
@@ -90,6 +63,7 @@
               </span>
               <span v-else>{{ $t('splash.steps.model.completed') }}</span>
             </span>
+            <span v-else>{{ $t('splash.steps.model.completed') }}</span>
           </span>
           <span v-else>{{ $t('splash.steps.model.completed') }}</span>
         </StepItem>
@@ -237,7 +211,6 @@ const progress = computed(() => {
       } else {
         // 模型下载进行中，按比例计算进度 (10-75%)
         baseProgress = 10 + Math.min(modelProgress.value * 0.65, 65)
-        console.log(modelProgress.value, baseProgress)
       }
       break
     case 2:
@@ -329,9 +302,10 @@ const continueToConfigStep = async (): Promise<void> => {
       setTimeout(() => {
         // 最后检查是否有错误，确保在延迟期间没有出现错误
         if (currentStep.value === 3 && !hasDownloadError.value && !hasConfigError.value) {
-          isCompleted.value = true
           emit('complete')
           props.onComplete?.()
+
+          isCompleted.value = true
         }
       }, 1500)
     } else {
