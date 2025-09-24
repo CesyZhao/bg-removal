@@ -1,29 +1,8 @@
 <template>
   <div class="main-view h-full w-full bg-white flex flex-row relative">
-    <div class="absolute top-0 right-0 w-64 h-64 opacity-10">
-      <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-        <path
-          fill="currentColor"
-          class="text-primary"
-          d="M45,-51.5C59.1,-42.5,71.7,-29.6,76.3,-13.8C80.9,2,77.5,20.7,68.2,35.7C58.9,50.7,43.7,62,26.9,67.8C10.1,73.6,-8.3,73.9,-24.9,68.1C-41.5,62.3,-56.2,50.3,-65.2,34.8C-74.1,19.3,-77.3,0.3,-73.1,-16.7C-68.9,-33.7,-57.4,-48.7,-43.1,-57.7C-28.8,-66.7,-11.6,-69.7,2.8,-73C17.2,-76.3,30.9,-60.5,45,-51.5Z"
-          transform="translate(100 100)"
-        />
-      </svg>
-    </div>
-    <div class="absolute bottom-0 left-0 w-48 h-48 opacity-10">
-      <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-        <path
-          fill="currentColor"
-          class="text-primary"
-          d="M47.7,-57.2C59.5,-45.9,65.8,-29.8,68.2,-13.5C70.7,2.8,69.3,19.2,61.4,31.8C53.5,44.3,39.1,53,23.4,60.1C7.8,67.2,-9.1,72.8,-24.9,69.7C-40.8,66.7,-55.5,55,-65.1,39.8C-74.7,24.6,-79.1,5.9,-75.1,-10.5C-71.1,-26.9,-58.7,-41,-44.3,-52.2C-29.9,-63.5,-14.9,-71.9,1,-73C16.9,-74.1,33.8,-71,47.7,-57.2Z"
-          transform="translate(100 100)"
-        />
-      </svg>
-    </div>
-
     <!-- 左侧Banner -->
     <div
-      class="banner-container w-1/3 bg-white flex items-center justify-center relative overflow-hidden -mt-24"
+      class="banner-container w-1/3 bg-white flex items-center justify-center relative overflow-hidden mt-4"
     >
       <img
         src="@renderer/assets/Banner.png"
@@ -45,7 +24,7 @@
           />
         </svg>
       </div>
-      <div class="absolute bottom-10 left-10 opacity-80">
+      <div class="absolute bottom-10 left-10 opacity-40">
         <svg
           width="120"
           height="40"
@@ -64,15 +43,14 @@
     </div>
 
     <!-- 主内容区域 -->
-    <main class="flex-1 overflow-auto p-6 flex items-center justify-center mt-24">
+    <main class="flex-1 overflow-auto p-6 flex items-center justify-center -mt-16">
       <div class="max-w-md w-full relative">
         <div class="text-center py-8">
-          <h2 class="text-2xl font-bold text-gray-800 mb-4">图片背景消除</h2>
-          <p class="text-gray-600 mb-6">100% 全自动且免费</p>
+          <h2 class="text-2xl font-bold text-gray-800 my-12">图片背景消除</h2>
 
           <!-- 上传区域 -->
           <div
-            class="bg-white rounded-xl p-6 mx-auto border-2 border-dashed border-primary/30 hover:border-primary transition-colors shadow-sm relative z-10"
+            class="bg-white rounded-xl p-16 mx-auto border-2 border-dashed border-primary/30 hover:border-primary transition-colors shadow-sm relative z-10"
           >
             <div class="flex flex-col items-center justify-center gap-3">
               <div>
@@ -82,7 +60,21 @@
               <button class="btn btn-primary text-white border-none mt-2">选择图片</button>
             </div>
           </div>
-          <div class="absolute -bottom-4 -right-8 opacity-70 rotate-180">
+
+          <!-- 试试这些示例区域 -->
+          <div class="mt-8">
+            <h3 class="text-gray-600 text-sm mb-3">试试这些</h3>
+            <div class="flex justify-center gap-3">
+              <div v-for="example in examples" :key="example">
+                <div
+                  class="w-16 h-16 rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                >
+                  <img :src="example" alt="示例" class="w-full h-full object-cover" />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="absolute top-4 -right-8 opacity-70 rotate-90">
             <svg
               width="60"
               height="60"
@@ -107,6 +99,12 @@
 </template>
 
 <script setup lang="ts">
+import example1 from '@renderer/assets/example1.png'
+import example2 from '@renderer/assets/example2.png'
+import example3 from '@renderer/assets/example3.png'
+import example4 from '@renderer/assets/example4.png'
+
+const examples = [example1, example2, example3, example4]
 // 打开设置页面
 </script>
 
