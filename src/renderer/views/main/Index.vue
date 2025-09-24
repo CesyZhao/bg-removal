@@ -1,6 +1,5 @@
 <template>
   <div class="main-view h-full w-full bg-white flex flex-row relative">
-    <!-- 科技感装饰元素 -->
     <div class="absolute top-0 right-0 w-64 h-64 opacity-10">
       <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
         <path
@@ -32,7 +31,6 @@
         class="max-w-full h-auto relative z-10"
       />
 
-      <!-- 科技感装饰 - 左侧 -->
       <div class="absolute top-10 right-10 w-20 h-20 opacity-20">
         <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
           <circle
@@ -68,26 +66,6 @@
     <!-- 主内容区域 -->
     <main class="flex-1 overflow-auto p-6 flex items-center justify-center mt-24">
       <div class="max-w-md w-full relative">
-        <!-- 科技感装饰 - 右侧 -->
-        <div class="absolute -top-10 -left-20 opacity-70">
-          <svg
-            width="60"
-            height="60"
-            viewBox="0 0 60 60"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            class="text-primary"
-          >
-            <rect x="0" y="0" width="10" height="10" fill="currentColor" opacity="0.2" />
-            <rect x="15" y="0" width="10" height="10" fill="currentColor" opacity="0.4" />
-            <rect x="30" y="0" width="10" height="10" fill="currentColor" opacity="0.6" />
-            <rect x="45" y="0" width="10" height="10" fill="currentColor" opacity="0.8" />
-            <rect x="0" y="15" width="10" height="10" fill="currentColor" opacity="0.4" />
-            <rect x="0" y="30" width="10" height="10" fill="currentColor" opacity="0.6" />
-            <rect x="0" y="45" width="10" height="10" fill="currentColor" opacity="0.8" />
-          </svg>
-        </div>
-
         <div class="text-center py-8">
           <h2 class="text-2xl font-bold text-gray-800 mb-4">图片背景消除</h2>
           <p class="text-gray-600 mb-6">100% 全自动且免费</p>
@@ -97,54 +75,29 @@
             class="bg-white rounded-xl p-6 mx-auto border-2 border-dashed border-primary/30 hover:border-primary transition-colors shadow-sm relative z-10"
           >
             <div class="flex flex-col items-center justify-center gap-3">
-              <div class="bg-primary/10 p-3 rounded-full">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  class="h-7 w-7 text-primary"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                  />
-                </svg>
-              </div>
               <div>
                 <p class="font-medium text-gray-800">拖拽图片到此处或点击上传</p>
                 <p class="text-sm text-gray-500 mt-1">支持 JPG, PNG, WEBP 格式</p>
               </div>
-              <button class="btn btn-primary hover:bg-blue-600 text-white border-none mt-2">
-                选择图片
-              </button>
+              <button class="btn btn-primary text-white border-none mt-2">选择图片</button>
             </div>
           </div>
-
-          <!-- 科技感装饰 - 底部 -->
-          <div class="absolute bottom-0 right-0 opacity-70">
+          <div class="absolute -bottom-4 -right-8 opacity-70 rotate-180">
             <svg
-              width="120"
-              height="40"
-              viewBox="0 0 120 40"
+              width="60"
+              height="60"
+              viewBox="0 0 60 60"
               fill="none"
               xmlns="http://www.w3.org/2000/svg"
               class="text-primary"
             >
-              <circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1" fill="none" />
-              <circle cx="10" cy="10" r="2" fill="currentColor" />
-              <line x1="10" y1="20" x2="10" y2="40" stroke="currentColor" stroke-width="1" />
-              <line
-                x1="20"
-                y1="10"
-                x2="120"
-                y2="10"
-                stroke="currentColor"
-                stroke-width="1"
-                stroke-dasharray="4 2"
-              />
+              <rect x="0" y="0" width="10" height="10" fill="currentColor" opacity="0.8" />
+              <rect x="15" y="0" width="10" height="10" fill="currentColor" opacity="0.6" />
+              <rect x="30" y="0" width="10" height="10" fill="currentColor" opacity="0.4" />
+              <rect x="45" y="0" width="10" height="10" fill="currentColor" opacity="0.2" />
+              <rect x="0" y="15" width="10" height="10" fill="currentColor" opacity="0.6" />
+              <rect x="0" y="30" width="10" height="10" fill="currentColor" opacity="0.4" />
+              <rect x="0" y="45" width="10" height="10" fill="currentColor" opacity="0.2" />
             </svg>
           </div>
         </div>
