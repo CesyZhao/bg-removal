@@ -16,15 +16,11 @@
 
     <!-- 主页面 -->
     <MainView v-if="showMainView" class="absolute inset-0 z-10" />
-
-    <!-- 设置页面 -->
-    <Setting />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import Setting from '@renderer/components/setting/Index.vue'
 import SplashScreen from '@renderer/views/splash-screen/Index.vue'
 import MainView from '@renderer/views/main/Index.vue'
 import AppLogo from '@renderer/components/splash-screen/AppLogo.vue'

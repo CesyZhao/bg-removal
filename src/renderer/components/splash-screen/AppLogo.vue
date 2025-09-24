@@ -50,7 +50,7 @@ const logoClass = computed(() => {
   const classes: string[] = []
 
   if (props.position === 'top-left') {
-    classes.push('absolute', 'top-6', 'left-6', 'z-20')
+    classes.push('absolute', 'top-8', 'left-6', 'z-20')
   } else if (props.position === 'center') {
     // 居中定位需要父容器支持，这里添加相对定位以便在需要时可以定位
     classes.push(
