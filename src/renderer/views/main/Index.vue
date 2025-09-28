@@ -1,5 +1,5 @@
 <template>
-  <div class="main-view h-full w-full bg-white flex flex-row relative">
+  <div class="main-view h-full w-full bg-white flex flex-row relative pt-24 pb-12">
     <transition name="fade">
       <setting />
     </transition>
@@ -11,7 +11,7 @@
       >
         <!-- 左侧Banner -->
         <div
-          class="banner-container w-1/3 bg-white flex items-center justify-center relative overflow-hidden mt-4 -mr-12"
+          class="banner-container w-1/3 bg-white flex items-center justify-center relative overflow-hidden -mt-40 -mr-12"
         >
           <img
             src="@renderer/assets/Banner.png"
@@ -160,14 +160,6 @@ const processedImages = ref<IProcessedImage[]>([])
 const activeImage = ref<IProcessedImage | null>(null)
 let nextId = 1
 
-let processorInitialized = false
-const ensureProcessor = async (): Promise<void> => {
-  if (processorInitialized) return
-  const processor = getBackgroundRemovalProcessor()
-  await processor.initialize()
-  processorInitialized = true
-}
-
 const normalizeProcessedOutput = async (
   output: HTMLCanvasElement | File | null | undefined,
   baseName: string
@@ -199,25 +191,26 @@ const startProcessing = async (file: File): Promise<void> => {
   processedImages.value.push(imageItem)
   activeImage.value = imageItem
 
-  try {
-    await ensureProcessor()
-    const processor = getBackgroundRemovalProcessor()
-    const result = await processor.removeBackground(file)
-    const processedFile = await normalizeProcessedOutput(result, file.name.split('.')[0])
-    if (processedFile) {
-      // 更新对应条目的处理结果
-      const idx = processedImages.value.findIndex((it) => it.id === imageItem.id)
-      if (idx !== -1) {
-        processedImages.value[idx] = {
-          ...processedImages.value[idx],
-          processedImage: processedFile
+  setTimeout(async () => {
+    try {
+      const processor = getBackgroundRemovalProcessor()
+      const result = await processor.removeBackground(file)
+      const processedFile = await normalizeProcessedOutput(result, file.name.split('.')[0])
+      if (processedFile) {
+        // 更新对应条目的处理结果
+        const idx = processedImages.value.findIndex((it) => it.id === imageItem.id)
+        if (idx !== -1) {
+          processedImages.value[idx] = {
+            ...processedImages.value[idx],
+            processedImage: processedFile
+          }
+          activeImage.value = processedImages.value[idx]
         }
-        activeImage.value = processedImages.value[idx]
       }
+    } catch (e) {
+      console.error('处理图片失败:', e)
     }
-  } catch (e) {
-    console.error('处理图片失败:', e)
-  }
+  }, 500)
 }
 
 const openFilePicker = (): void => {

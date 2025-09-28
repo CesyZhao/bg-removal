@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col w-full h-full items-center">
-    <div v-if="image.processedImage" class="absolute right-4 top-2 z-30 flex items-center gap-2">
+    <div v-if="image.processedImage" class="right-4 top-2 z-30 flex items-center gap-2 mb-4">
       <i class="iconfont icon-suoxiao cursor-pointer" @click="zoomOut"></i>
       <i class="iconfont icon-fangda cursor-pointer" @click="zoomIn"></i>
       <i class="iconfont icon-ico-quchubeijing"></i>
@@ -15,7 +15,7 @@
       <!-- 原始图片 -->
       <div
         v-if="originalImageUrl && !backgroundRemoved"
-        class="absolute inset-0 flex w-full h-full overflow-hidden justify-center items-center z-20"
+        class="relative inset-0 flex w-full h-full overflow-hidden justify-center items-center z-20"
         :class="{ 'hide-original': processedImageUrl }"
         :style="imageStyle"
       >
@@ -40,7 +40,7 @@
       <!-- 处理后的图片 -->
       <div
         v-if="processedImageUrl"
-        class="absolute inset-0 flex w-full h-full overflow-hidden justify-center items-center z-10 opacity-0 bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAGUExURb+/v////5nD/3QAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAUSURBVBjTYwABQSCglEENMxgYGAAynwRB8BEAgQAAAABJRU5ErkJggg==')] dark:bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAClJREFUOE9jZGBg+M+AH5jgk2YcNYBhmISBMYF0cIZQOhg1gIFhiIcBAHBaEaElKspWAAAAAElFTkSuQmCC')]"
+        class="relative inset-0 flex w-full h-full overflow-hidden justify-center items-center z-10 opacity-0 bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAGUExURb+/v////5nD/3QAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAUSURBVBjTYwABQSCglEENMxgYGAAynwRB8BEAgQAAAABJRU5ErkJggg==')] dark:bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAClJREFUOE9jZGBg+M+AH5jgk2YcNYBhmISBMYF0cIZQOhg1gIFhiIcBAHBaEaElKspWAAAAAElFTkSuQmCC')]"
         :class="{ 'opacity-100': processedImageUrl }"
         :style="imageStyle"
       >
@@ -60,7 +60,7 @@
     <!-- 处理图片列表 -->
     <div
       v-if="processedImagesList && processedImagesList.length > 0"
-      class="relative flex items-center w-4/5 max-w-[80%] h-16 mt-2.5"
+      class="relative flex items-center w-4/5 max-w-[80%] h-16 mt-4"
     >
       <button
         v-show="showScrollButtons"
@@ -265,7 +265,7 @@ const imageStyle = computed(() => {
   const widthRatio = maxWidth / imageSize.value.width
   const heightRatio = maxHeight / imageSize.value.height
   const scale = Math.min(widthRatio, heightRatio, 1)
-
+  console.log(imageSize.value.width, '-----------')
   return {
     width: `${imageSize.value.width * scale}px`,
     height: `${imageSize.value.height * scale}px`,
