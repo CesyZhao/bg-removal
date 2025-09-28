@@ -141,8 +141,8 @@ import {
   getBackgroundRemovalProcessor,
   type ModelDownloadProgress
 } from '@renderer/processors/background-removal'
-import StepItem from '@renderer/components/splash-screen/StepItem.vue'
-import RetryButton from '@renderer/components/splash-screen/RetryButton.vue'
+import StepItem from './StepItem.vue'
+import RetryButton from './RetryButton.vue'
 import { detectWebGPUSupport, GPUSupportFlag } from '@renderer/utils/gpu-detection'
 
 // 扩展的下载进度接口，包含错误信息

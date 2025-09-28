@@ -23,7 +23,7 @@
 import { ref, computed } from 'vue'
 import SplashScreen from '@renderer/views/splash-screen/Index.vue'
 import MainView from '@renderer/views/main/Index.vue'
-import AppLogo from '@renderer/components/splash-screen/AppLogo.vue'
+import AppLogo from '@renderer/components/logo/Index.vue'
 
 // 控制页面显示状态
 const showSplashScreen = ref(true)

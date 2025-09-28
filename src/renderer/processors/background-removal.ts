@@ -122,18 +122,30 @@ export class BackgroundRemovalProcessor {
 
       if (modelType === 'Briaai') {
         // RMBG-1.4 使用 AutoModel 方式加载
-        this.segmentationPipeline = await AutoModel.from_pretrained('briaai/RMBG-1.4', {
+        this.model = await AutoModel.from_pretrained('briaai/RMBG-1.4', {
           device,
           config: { model_type: 'custom' }
+        })
+        this.processor = await AutoProcessor.from_pretrained('briaai/RMBG-1.4', {
+          do_normalize: true,
+          do_pad: false,
+          do_rescale: true,
+          do_resize: true,
+          image_mean: [0.5, 0.5, 0.5],
+          feature_extractor_type: 'ImageFeatureExtractor',
+          image_std: [1, 1, 1],
+          resample: 2,
+          rescale_factor: 0.00392156862745098,
+          size: { width: 1024, height: 1024 }
         })
         console.log(`RMBG-1.4 模型从public目录加载完成，使用设备: ${device}`)
       } else if (modelType === 'Xenova') {
         // MODNet 使用 AutoProcessor + AutoModel 方式
-        this.processor = await AutoProcessor.from_pretrained(publicPath)
-
         this.model = await AutoModel.from_pretrained(publicPath, {
           device
         })
+        this.processor = await AutoProcessor.from_pretrained(publicPath)
+
         console.log(`MODNet 模型从public目录加载完成，使用设备: ${device}`)
       }
     } catch (error) {
@@ -164,32 +176,59 @@ export class BackgroundRemovalProcessor {
    */
   async removeBackground(
     imageInput: HTMLImageElement | HTMLCanvasElement | string | File
-  ): Promise<HTMLCanvasElement> {
+  ): Promise<HTMLCanvasElement | File> {
     if (!this.isInitialized || !this.currentModelType) {
       throw new Error('模型未初始化，请先调用 initialize()')
     }
 
     try {
       let imageElement: HTMLImageElement
+      let baseName = 'image'
 
       // 处理不同类型的输入
       if (typeof imageInput === 'string') {
         // URL 字符串
         imageElement = await this.loadImageFromUrl(imageInput)
+        try {
+          const url = new URL(imageInput)
+          const last = url.pathname.split('/').filter(Boolean).pop() || ''
+          baseName = last
+            ? last.includes('.')
+              ? last.substring(0, last.lastIndexOf('.'))
+              : last
+            : 'image'
+        } catch {
+          baseName = 'image'
+        }
       } else if (imageInput instanceof File) {
         // File 对象
         imageElement = await this.loadImageFromFile(imageInput)
+        baseName = imageInput.name.split('.')[0]
       } else if (imageInput instanceof HTMLCanvasElement) {
         // Canvas 转换为 Image
         imageElement = await this.canvasToImage(imageInput)
+        baseName = 'canvas'
       } else {
         // HTMLImageElement
         imageElement = imageInput
+        if (imageElement.src) {
+          try {
+            const url = new URL(imageElement.src)
+            const last = url.pathname.split('/').filter(Boolean).pop() || ''
+            baseName = last
+              ? last.includes('.')
+                ? last.substring(0, last.lastIndexOf('.'))
+                : last
+              : 'image'
+          } catch {
+            baseName = 'image'
+          }
+        }
       }
 
       // 使用已加载的模型进行图片处理
       if (this.currentModelType === 'Briaai') {
-        return await this.processWithRMBG(imageElement)
+        return await this.processWithRMBG(imageElement, baseName)
       } else if (this.currentModelType === 'Xenova') {
         return await this.processWithMODNet(imageElement)
       }
@@ -204,8 +243,8 @@ export class BackgroundRemovalProcessor {
   /**
    * 使用 RMBG-1.4 处理图片
    */
-  private async processWithRMBG(imageElement: HTMLImageElement): Promise<HTMLCanvasElement> {
-    if (!this.segmentationPipeline) {
+  private async processWithRMBG(imageElement: HTMLImageElement, baseName: string): Promise<File> {
+    if (!this.model || !this.processor) {
       throw new Error('RMBG 模型未初始化')
     }
 
@@ -213,40 +252,42 @@ export class BackgroundRemovalProcessor {
       // 使用 AutoModel 方式处理图片
       const image = await RawImage.fromURL(imageElement.src)
 
+      const { pixel_values } = await this.processor(image)
+
       // 执行模型推理
-      const { output } = await this.segmentationPipeline({ pixel_values: image })
+      const { output } = await this.model({ input: pixel_values })
 
-      // 获取输出的遮罩数据
-      const maskData = output.data
-      const [height, width] = output.dims.slice(-2)
+      const { data: maskData } = await RawImage.fromTensor(output[0].mul(255).to('uint8')).resize(
+        image.width,
+        image.height
+      )
 
-      // 创建输出画布
       const canvas = document.createElement('canvas')
-      const ctx = canvas.getContext('2d')!
+      canvas.width = image.width
+      canvas.height = image.height
+      const ctx = canvas.getContext('2d')
+      if (!ctx) throw new Error('Could not get 2d context')
 
-      canvas.width = width
-      canvas.height = height
+      // Draw original image output to canvas
+      ctx.drawImage(image.toCanvas(), 0, 0)
 
-      // 绘制原图
-      ctx.drawImage(imageElement, 0, 0, width, height)
-
-      // 获取图像数据并应用遮罩
-      const imageData = ctx.getImageData(0, 0, width, height)
-      const data = imageData.data
-
-      // 应用alpha遮罩
-      for (let i = 0; i < height; i++) {
-        for (let j = 0; j < width; j++) {
-          const pixelIndex = (i * width + j) * 4
-          const maskIndex = i * width + j
-
-          // 设置alpha值（RMBG模型输出的是前景概率）
-          data[pixelIndex + 3] = Math.round(maskData[maskIndex] * 255)
-        }
+      // Update alpha channel
+      const pixelData = ctx.getImageData(0, 0, image.width, image.height)
+      for (let i = 0; i < maskData.length; ++i) {
+        pixelData.data[4 * i + 3] = maskData[i]
       }
+      ctx.putImageData(pixelData, 0, 0)
 
-      ctx.putImageData(imageData, 0, 0)
-      return canvas
+      // Convert canvas to blob
+      const blob = await new Promise<Blob>((resolve, reject) =>
+        canvas.toBlob(
+          (blob) => (blob ? resolve(blob) : reject(new Error('Failed to create blob'))),
+          'image/png'
+        )
+      )
+
+      const processedFile = new File([blob], `${baseName}-bg-removed.png`, { type: 'image/png' })
+      return processedFile
     } catch (error) {
       console.error('RMBG模型处理失败:', error)
       throw new Error(`RMBG处理失败: ${error instanceof Error ? error.message : '未知错误'}`)
