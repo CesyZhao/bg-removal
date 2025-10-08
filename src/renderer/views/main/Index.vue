@@ -1,11 +1,10 @@
 <template>
   <div class="main-view h-full w-full bg-white flex flex-row relative pt-24 pb-12">
-    <transition name="fade">
-      <setting />
-    </transition>
+    <setting />
+
     <transition name="fade-scale">
       <div
-        v-if="!showProceed"
+        v-show="!processedImages.length"
         class="main-content h-full w-full bg-white flex flex-row relative pl-16"
         :class="{ loaded: load }"
       >
@@ -122,18 +121,15 @@
       </div>
     </transition>
 
-    <!-- 处理结果区域：proceed-image-list -->
     <transition name="fade-scale">
-      <div v-if="showProceed" class="flex-1 h-full w-full">
-        <ProceedImageList
-          v-if="activeImage"
-          :image="activeImage"
-          :processed-images-list="processedImages"
-          alt="处理结果"
-          @select-image="onSelectImage"
-          @add-image="onAddImage"
-        />
-      </div>
+      <ProceedImageList
+        v-if="activeImage"
+        :image="activeImage"
+        :processed-images-list="processedImages"
+        alt="处理结果"
+        @select-image="onSelectImage"
+        @add-image="onAddImage"
+      />
     </transition>
   </div>
 </template>
@@ -152,7 +148,6 @@ import type { IProcessedImage } from '@renderer/definitions/module'
 const examples: string[] = [example1, example2, example3, example4]
 
 const load = ref(false)
-const showProceed = ref(false)
 const fileInputRef = ref<HTMLInputElement | null>(null)
 
 // 处理队列及当前图片
@@ -180,16 +175,16 @@ const normalizeProcessedOutput = async (
 }
 
 const startProcessing = async (file: File): Promise<void> => {
-  // 立刻隐藏其他内容并展示处理列表
-  showProceed.value = true
-
   const imageItem: IProcessedImage = {
     id: nextId++,
     originalImage: file,
     processedImage: undefined
   }
   processedImages.value.push(imageItem)
-  activeImage.value = imageItem
+
+  setTimeout(() => {
+    activeImage.value = imageItem
+  }, 300)
 
   setTimeout(async () => {
     try {
@@ -210,7 +205,7 @@ const startProcessing = async (file: File): Promise<void> => {
     } catch (e) {
       console.error('处理图片失败:', e)
     }
-  }, 500)
+  }, 350)
 }
 
 const openFilePicker = (): void => {

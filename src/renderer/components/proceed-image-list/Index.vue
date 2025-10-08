@@ -1,6 +1,9 @@
 <template>
   <div class="flex flex-col w-full h-full items-center">
-    <div v-if="image.processedImage" class="right-4 top-2 z-30 flex items-center gap-2 mb-4">
+    <div
+      class="right-4 top-2 z-30 flex items-center gap-2 mb-4 opacity-0"
+      :class="{ 'opacity-100': backgroundRemoved }"
+    >
       <i class="iconfont icon-suoxiao cursor-pointer" @click="zoomOut"></i>
       <i class="iconfont icon-fangda cursor-pointer" @click="zoomIn"></i>
       <i class="iconfont icon-ico-quchubeijing"></i>
@@ -15,14 +18,14 @@
       <!-- 原始图片 -->
       <div
         v-if="originalImageUrl && !backgroundRemoved"
-        class="relative inset-0 flex w-full h-full overflow-hidden justify-center items-center z-20"
+        class="original-image absolute flex w-full h-full overflow-hidden justify-center items-center z-20"
         :class="{ 'hide-original': processedImageUrl }"
         :style="imageStyle"
       >
         <!-- 加载中遮罩 -->
         <div
           v-if="!processedImageUrl"
-          class="absolute inset-0 bg-black/50 flex justify-center items-center"
+          class="absolute z-30 w-full h-full bg-black/50 flex justify-center items-center"
         >
           <div
             class="w-10 h-10 border-4 border-white/30 rounded-full border-t-white animate-spin"
@@ -40,7 +43,7 @@
       <!-- 处理后的图片 -->
       <div
         v-if="processedImageUrl"
-        class="relative inset-0 flex w-full h-full overflow-hidden justify-center items-center z-10 opacity-0 bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAGUExURb+/v////5nD/3QAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAUSURBVBjTYwABQSCglEENMxgYGAAynwRB8BEAgQAAAABJRU5ErkJggg==')] dark:bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAClJREFUOE9jZGBg+M+AH5jgk2YcNYBhmISBMYF0cIZQOhg1gIFhiIcBAHBaEaElKspWAAAAAElFTkSuQmCC')]"
+        class="absolute flex w-full h-full overflow-hidden justify-center items-center z-10 opacity-0 bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAGUExURb+/v////5nD/3QAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAUSURBVBjTYwABQSCglEENMxgYGAAynwRB8BEAgQAAAABJRU5ErkJggg==')] dark:bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAClJREFUOE9jZGBg+M+AH5jgk2YcNYBhmISBMYF0cIZQOhg1gIFhiIcBAHBaEaElKspWAAAAAElFTkSuQmCC')]"
         :class="{ 'opacity-100': processedImageUrl }"
         :style="imageStyle"
       >
@@ -64,7 +67,7 @@
     >
       <button
         v-show="showScrollButtons"
-        class="absolute w-[30px] h-[30px] bg-white/80 border border-gray-300 rounded-full flex justify-center items-center cursor-pointer z-10 font-bold disabled:opacity-50 disabled:cursor-not-allowed -left-[15px]"
+        class="absolute w-[30px] h-[30px] bg-white/80 border border-gray-300 rounded-full flex justify-center items-center cursor-pointer z-10 font-bold disabled:opacity-50 disabled:cursor-not-allowed -left-[40px]"
         :disabled="scrollPosition <= 0"
         @click="scrollLeft"
       >
@@ -101,7 +104,7 @@
 
       <button
         v-show="showScrollButtons"
-        class="absolute w-[30px] h-[30px] bg-white/80 border border-gray-300 rounded-full flex justify-center items-center cursor-pointer z-10 font-bold disabled:opacity-50 disabled:cursor-not-allowed -right-[15px]"
+        class="absolute w-[30px] h-[30px] bg-white/80 border border-gray-300 rounded-full flex justify-center items-center cursor-pointer z-10 font-bold disabled:opacity-50 disabled:cursor-not-allowed -right-[40px]"
         :disabled="scrollPosition >= maxScrollPosition"
         @click="scrollRight"
       >
@@ -246,7 +249,7 @@ watch(
     // 在下一个DOM更新周期后更新滚动状态
     setTimeout(() => {
       updateMaxScrollPosition()
-    }, 0)
+    }, 100)
   },
   { immediate: true, deep: true }
 )
@@ -341,12 +344,16 @@ onBeforeUnmount(() => {
 
 <style scoped>
 /* 原图裁剪过渡，仅保留必要的自定义样式 */
+.original-image img {
+  transition: clip-path 1.2s ease;
+  will-change: clip-path;
+  clip-path: inset(0 0 0 0);
+}
 .hide-original img {
   clip-path: inset(0 100% 0 0);
 }
-.hide-original img {
-  transition: clip-path 1.2s ease;
-  will-change: clip-path;
+.original-image:not(.hide-original) img {
+  transition: none;
 }
 
 /* 隐藏滚动条（跨浏览器） */
