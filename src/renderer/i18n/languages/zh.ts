@@ -87,35 +87,42 @@ export default {
       allSaved: '所有设置已保存'
     }
   },
-  entry: {
-    steps: {
-      environment: {
-        title: '基础环境',
-        waiting: '等待检查',
-        checking: '正在检查环境支持情况...',
-        finished: '环境检查已完成',
-        checkFailed: '检查失败'
-      },
-      dependencies: {
-        title: '必要依赖',
-        waiting: '等待检查',
-        checking: '正在检查模型...',
-        finished: '模型检查已完成',
-        checkFailed: '模型检查失败'
-      },
-      config: {
-        title: '系统配置',
-        waiting: '等待完成',
-        checking: '正在检查系统配置...',
-        normal: '系统配置正常',
-        checkFailed: '系统配置检查失败'
-      }
+  editor: {
+    bgColor: '背景颜色',
+    zoomIn: '放大',
+    zoomOut: '缩小',
+    undo: '撤销',
+    redo: '重做',
+    aiEnhance: 'AI超清',
+    watermarkRemoval: '水印/文字消除'
+  },
+  steps: {
+    environment: {
+      title: '基础环境',
+      waiting: '等待检查',
+      checking: '正在检查环境支持情况...',
+      finished: '环境检查已完成',
+      checkFailed: '检查失败'
     },
-    modelStatus: {
-      title: '模型状态',
-      downloaded: '已下载',
-      notDownloaded: '未下载'
+    dependencies: {
+      title: '必要依赖',
+      waiting: '等待检查',
+      checking: '正在检查模型...',
+      finished: '模型检查已完成',
+      checkFailed: '模型检查失败'
+    },
+    config: {
+      title: '系统配置',
+      waiting: '等待完成',
+      checking: '正在检查系统配置...',
+      normal: '系统配置正常',
+      checkFailed: '系统配置检查失败'
     }
+  },
+  modelStatus: {
+    title: '模型状态',
+    downloaded: '已下载',
+    notDownloaded: '未下载'
   },
   splash: {
     appName: 'Background Eraser',

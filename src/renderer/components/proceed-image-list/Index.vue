@@ -1,65 +1,140 @@
 <template>
   <div class="flex flex-col w-full h-full items-center">
-    <div class="flex w-full h-full items-center">
-      <div
-        ref="containerRef"
-        class="relative overflow-hidden w-full h-[calc(100%-100px)] flex justify-center items-center"
-      >
-        <!-- 原始图片 -->
+    <!-- 主内容区域：工具栏和图片在同一行 -->
+    <div class="flex w-full flex-1">
+      <!-- 左侧图片区域 -->
+      <div class="flex-1 relative overflow-hidden">
         <div
-          v-if="originalImageUrl && !backgroundRemoved"
-          class="original-image absolute flex w-full h-full overflow-hidden justify-center items-center z-20"
-          :class="{ 'hide-original': processedImageUrl }"
-          :style="imageStyle"
+          ref="containerRef"
+          class="relative overflow-hidden w-full h-full flex justify-center items-center"
         >
-          <!-- 加载中遮罩 -->
+          <!-- 原始图片 -->
           <div
-            v-if="!processedImageUrl"
-            class="absolute z-30 w-full h-full bg-black/50 flex justify-center items-center"
+            v-if="originalImageUrl && !backgroundRemoved"
+            class="original-image absolute flex w-full h-full overflow-hidden justify-center items-center z-20"
+            :class="{ 'hide-original': processedImageUrl }"
+            :style="imageStyle"
           >
+            <!-- 加载中遮罩 -->
             <div
-              class="w-10 h-10 border-4 border-white/30 rounded-full border-t-white animate-spin"
-            ></div>
+              v-if="!processedImageUrl"
+              class="absolute z-30 w-full h-full bg-black/50 flex justify-center items-center"
+            >
+              <div
+                class="w-10 h-10 border-4 border-white/30 rounded-full border-t-white animate-spin"
+              ></div>
+            </div>
+            <img
+              ref="originalImageRef"
+              :src="originalImageUrl"
+              :alt="alt"
+              class="max-w-full max-h-full"
+              @load="handleImageLoad"
+            />
           </div>
-          <img
-            ref="originalImageRef"
-            :src="originalImageUrl"
-            :alt="alt"
-            class="max-w-full max-h-full"
-            @load="handleImageLoad"
-          />
-        </div>
 
-        <!-- 处理后的图片 -->
-        <div
-          v-if="processedImageUrl"
-          class="absolute flex w-full h-full overflow-hidden justify-center items-center z-10 opacity-0 bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAGUExURb+/v////5nD/3QAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAUSURBVBjTYwABQSCglEENMxgYGAAynwRB8BEAgQAAAABJRU5ErkJggg==')] dark:bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAClJREFUOE9jZGBg+M+AH5jgk2YcNYBhmISBMYF0cIZQOhg1gIFhiIcBAHBaEaElKspWAAAAAElFTkSuQmCC')]"
-          :class="{ 'opacity-100': processedImageUrl }"
-          :style="imageStyle"
-        >
-          <img
-            :src="processedImageUrl"
-            :alt="alt"
-            :style="imageScale"
-            class="max-w-full max-h-full"
-            draggable="false"
-            @mousedown="startDrag"
-            @mouseup="stopDrag"
-            @mousemove="drag"
-          />
+          <!-- 处理后的图片 -->
+          <div
+            v-if="processedImageUrl"
+            class="absolute flex w-full h-full overflow-hidden justify-center items-center z-10 opacity-0"
+            :class="{ 'opacity-100': processedImageUrl }"
+          >
+            <div class="relative flex justify-center items-center" :style="backgroundStyle">
+              <img
+                ref="processedImageRef"
+                :src="processedImageUrl"
+                :alt="alt"
+                :style="imageScale"
+                class="max-w-full max-h-full"
+                draggable="false"
+                @mousedown="startDrag"
+                @mouseup="stopDrag"
+                @mousemove="drag"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="flex items-center gap-2 mb-4">
-        <i class="iconfont icon-suoxiao cursor-pointer" @click="zoomOut"></i>
-        <i class="iconfont icon-fangda cursor-pointer" @click="zoomIn"></i>
-        <i class="iconfont icon-ico-quchubeijing"></i>
-        <i class="iconfont icon-undo"></i>
-        <i class="iconfont icon-redo"></i>
-        <i class="iconfont icon-download"></i>
+      <!-- 右侧工具栏 -->
+      <div class="w-64 bg-base-100 p-4 mr-24 z-30 flex flex-col h-full">
+        <!-- 工具栏内容，根据图片处理状态控制可用性 -->
+        <div :class="{ 'opacity-50 pointer-events-none': !processedImageUrl }">
+          <!-- 背景颜色选择器 -->
+          <div class="mb-4 mt-8">
+            <h3 class="text-base font-medium mb-2">{{ t('editor.bgColor', '背景颜色') }}</h3>
+            <div class="flex flex-wrap gap-2">
+              <div
+                v-for="(color, index) in backgroundColors"
+                :key="index"
+                class="w-12 h-12 rounded-lg cursor-pointer border border-base-300 flex items-center justify-center transition-all"
+                :class="{ 'ring-2 ring-primary ring-offset-1': selectedBgColor === color.value }"
+                :style="{ background: color.style }"
+                @click="selectBackgroundColor(color.value)"
+              >
+                <i v-if="color.icon" class="iconfont" :class="color.icon"></i>
+              </div>
+            </div>
+          </div>
+
+          <div class="h-px w-full bg-base-300 my-3"></div>
+
+          <!-- 功能按钮区 -->
+          <div class="mb-4 mt-8">
+            <h3 class="text-base font-medium mb-2">{{ t('editor.tools', '工具') }}</h3>
+            <div class="flex flex-wrap gap-2">
+              <!-- 缩放控制 -->
+              <button
+                class="btn btn-sm btn-circle btn-ghost tooltip"
+                data-tip="{{ $t('editor.zoomOut', '缩小') }}"
+                @click="zoomOut"
+              >
+                <i class="iconfont icon-suoxiao"></i>
+              </button>
+              <button
+                class="btn btn-sm btn-circle btn-ghost tooltip"
+                data-tip="{{ $t('editor.zoomIn', '放大') }}"
+                @click="zoomIn"
+              >
+                <i class="iconfont icon-fangda"></i>
+              </button>
+
+              <!-- 编辑控制 -->
+              <button
+                class="btn btn-sm btn-circle btn-ghost tooltip"
+                data-tip="{{ t('editor.undo', '撤销') }}"
+              >
+                <i class="iconfont icon-undo"></i>
+              </button>
+              <button
+                class="btn btn-sm btn-circle btn-ghost tooltip"
+                data-tip="{{ t('editor.redo', '重做') }}"
+              >
+                <i class="iconfont icon-redo"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="h-px w-full bg-base-300 my-3"></div>
+
+          <div class="mt-16">
+            <!-- 下载按钮 -->
+            <button class="btn btn-primary btn-block" @click="emit('download')">
+              <i class="iconfont icon-download mr-1"></i>
+              {{ $t('common.download', '下载') }}
+            </button>
+          </div>
+        </div>
+
+        <!-- 处理中提示 -->
+        <div v-if="!processedImageUrl" class="absolute inset-0 flex items-center justify-center">
+          <div class="text-center text-base-content/70">
+            <div class="loading loading-spinner loading-lg mb-2"></div>
+            <p>{{ $t('editor.processing', '处理中...') }}</p>
+          </div>
+        </div>
       </div>
     </div>
-
     <!-- 处理图片列表 -->
     <div
       v-if="processedImagesList && processedImagesList.length > 0"
@@ -117,6 +192,9 @@
 <script lang="ts" setup>
 import type { IProcessedImage } from '@renderer/definitions/module'
 import { defineProps, defineEmits, computed, ref, watch, onBeforeUnmount, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const props = defineProps<{
   image: IProcessedImage
@@ -127,16 +205,82 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'select-image', image: IProcessedImage): void
   (e: 'add-image', force: boolean): void
+  (e: 'download'): void
 }>()
 
 // refs
 const containerRef = ref<HTMLDivElement | null>(null)
 const originalImageRef = ref<HTMLImageElement | null>(null)
+const processedImageRef = ref<HTMLImageElement | null>(null)
 const listContainerRef = ref<HTMLDivElement | null>(null)
 const listWrapperRef = ref<HTMLDivElement | null>(null)
 
 // 图片尺寸状态
 const imageSize = ref<{ width: number; height: number }>({ width: 0, height: 0 })
+
+// 背景颜色选项
+const backgroundColors = [
+  {
+    value: 'gradient',
+    style: 'linear-gradient(135deg, #f87171, #3b82f6, #10b981)',
+    icon: 'icon-tianjia'
+  },
+  {
+    value: 'transparent',
+    style:
+      'url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAGUExURb+/v////5nD/3QAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAUSURBVBjTYwABQSCglEENMxgYGAAynwRB8BEAgQAAAABJRU5ErkJggg==")',
+    icon: ''
+  },
+  { value: 'white', style: '#ffffff', icon: '' },
+  { value: 'black', style: '#000000', icon: '' },
+  { value: 'gray', style: '#cccccc', icon: '' },
+  { value: 'ai', style: 'linear-gradient(135deg, #e0f2fe, #f0fdfa)', icon: 'icon-ai' }
+]
+
+// 当前选中的背景颜色
+const selectedBgColor = ref('transparent')
+
+// 选择背景颜色
+const selectBackgroundColor = (color: string): void => {
+  selectedBgColor.value = color
+}
+
+// 计算背景样式
+const backgroundStyle = computed(() => {
+  let obj = {}
+  switch (selectedBgColor.value) {
+    case 'gradient':
+      obj = { background: 'linear-gradient(135deg, #f87171, #3b82f6, #10b981)' }
+      break
+    case 'transparent':
+      obj = {
+        background:
+          'url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAGUExURb+/v////5nD/3QAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAUSURBVBjTYwABQSCglEENMxgYGAAynwRB8BEAgQAAAABJRU5ErkJggg==")'
+      }
+      break
+    case 'white':
+      obj = { background: '#ffffff' }
+      break
+    case 'black':
+      obj = { background: '#000000' }
+      break
+    case 'gray':
+      obj = { background: '#cccccc' }
+      break
+    case 'ai':
+      obj = { background: 'linear-gradient(135deg, #e0f2fe, #f0fdfa)' }
+      break
+    default:
+      obj = {
+        background:
+          'url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAGUExURb+/v////5nD/3QAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAUSURBVBjTYwABQSCglEENMxgYGAAynwRB8BEAgQAAAABJRU5ErkJggg=")'
+      }
+  }
+  return {
+    ...imageStyle.value,
+    ...obj
+  }
+})
 
 // 存储图片的 URL
 const originalImageUrl = ref<string>('')
@@ -268,7 +412,6 @@ const imageStyle = computed(() => {
   const widthRatio = maxWidth / imageSize.value.width
   const heightRatio = maxHeight / imageSize.value.height
   const scale = Math.min(widthRatio, heightRatio, 1)
-  console.log(imageSize.value.width, '-----------')
   return {
     width: `${imageSize.value.width * scale}px`,
     height: `${imageSize.value.height * scale}px`,
