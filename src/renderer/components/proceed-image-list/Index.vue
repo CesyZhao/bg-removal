@@ -1,62 +1,62 @@
 <template>
   <div class="flex flex-col w-full h-full items-center">
-    <div
-      class="right-4 top-2 z-30 flex items-center gap-2 mb-4 opacity-0"
-      :class="{ 'opacity-100': backgroundRemoved }"
-    >
-      <i class="iconfont icon-suoxiao cursor-pointer" @click="zoomOut"></i>
-      <i class="iconfont icon-fangda cursor-pointer" @click="zoomIn"></i>
-      <i class="iconfont icon-ico-quchubeijing"></i>
-      <i class="iconfont icon-undo"></i>
-      <i class="iconfont icon-redo"></i>
-      <i class="iconfont icon-download"></i>
-    </div>
-    <div
-      ref="containerRef"
-      class="relative overflow-hidden w-full h-[calc(100%-100px)] flex justify-center items-center"
-    >
-      <!-- 原始图片 -->
+    <div class="flex w-full h-full items-center">
       <div
-        v-if="originalImageUrl && !backgroundRemoved"
-        class="original-image absolute flex w-full h-full overflow-hidden justify-center items-center z-20"
-        :class="{ 'hide-original': processedImageUrl }"
-        :style="imageStyle"
+        ref="containerRef"
+        class="relative overflow-hidden w-full h-[calc(100%-100px)] flex justify-center items-center"
       >
-        <!-- 加载中遮罩 -->
+        <!-- 原始图片 -->
         <div
-          v-if="!processedImageUrl"
-          class="absolute z-30 w-full h-full bg-black/50 flex justify-center items-center"
+          v-if="originalImageUrl && !backgroundRemoved"
+          class="original-image absolute flex w-full h-full overflow-hidden justify-center items-center z-20"
+          :class="{ 'hide-original': processedImageUrl }"
+          :style="imageStyle"
         >
+          <!-- 加载中遮罩 -->
           <div
-            class="w-10 h-10 border-4 border-white/30 rounded-full border-t-white animate-spin"
-          ></div>
+            v-if="!processedImageUrl"
+            class="absolute z-30 w-full h-full bg-black/50 flex justify-center items-center"
+          >
+            <div
+              class="w-10 h-10 border-4 border-white/30 rounded-full border-t-white animate-spin"
+            ></div>
+          </div>
+          <img
+            ref="originalImageRef"
+            :src="originalImageUrl"
+            :alt="alt"
+            class="max-w-full max-h-full"
+            @load="handleImageLoad"
+          />
         </div>
-        <img
-          ref="originalImageRef"
-          :src="originalImageUrl"
-          :alt="alt"
-          class="max-w-full max-h-full"
-          @load="handleImageLoad"
-        />
+
+        <!-- 处理后的图片 -->
+        <div
+          v-if="processedImageUrl"
+          class="absolute flex w-full h-full overflow-hidden justify-center items-center z-10 opacity-0 bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAGUExURb+/v////5nD/3QAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAUSURBVBjTYwABQSCglEENMxgYGAAynwRB8BEAgQAAAABJRU5ErkJggg==')] dark:bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAClJREFUOE9jZGBg+M+AH5jgk2YcNYBhmISBMYF0cIZQOhg1gIFhiIcBAHBaEaElKspWAAAAAElFTkSuQmCC')]"
+          :class="{ 'opacity-100': processedImageUrl }"
+          :style="imageStyle"
+        >
+          <img
+            :src="processedImageUrl"
+            :alt="alt"
+            :style="imageScale"
+            class="max-w-full max-h-full"
+            draggable="false"
+            @mousedown="startDrag"
+            @mouseup="stopDrag"
+            @mousemove="drag"
+          />
+        </div>
       </div>
 
-      <!-- 处理后的图片 -->
-      <div
-        v-if="processedImageUrl"
-        class="absolute flex w-full h-full overflow-hidden justify-center items-center z-10 opacity-0 bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAGUExURb+/v////5nD/3QAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAUSURBVBjTYwABQSCglEENMxgYGAAynwRB8BEAgQAAAABJRU5ErkJggg==')] dark:bg-[url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAClJREFUOE9jZGBg+M+AH5jgk2YcNYBhmISBMYF0cIZQOhg1gIFhiIcBAHBaEaElKspWAAAAAElFTkSuQmCC')]"
-        :class="{ 'opacity-100': processedImageUrl }"
-        :style="imageStyle"
-      >
-        <img
-          :src="processedImageUrl"
-          :alt="alt"
-          :style="imageScale"
-          class="max-w-full max-h-full"
-          draggable="false"
-          @mousedown="startDrag"
-          @mouseup="stopDrag"
-          @mousemove="drag"
-        />
+      <div class="flex items-center gap-2 mb-4">
+        <i class="iconfont icon-suoxiao cursor-pointer" @click="zoomOut"></i>
+        <i class="iconfont icon-fangda cursor-pointer" @click="zoomIn"></i>
+        <i class="iconfont icon-ico-quchubeijing"></i>
+        <i class="iconfont icon-undo"></i>
+        <i class="iconfont icon-redo"></i>
+        <i class="iconfont icon-download"></i>
       </div>
     </div>
 
