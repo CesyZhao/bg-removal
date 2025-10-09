@@ -35,7 +35,8 @@
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "@huggingface/transformers": "^3.7.3",
-    "electron-updater": "^6.3.9"
+    "electron-updater": "^6.3.9",
+    "vue3-colorpicker": "^2.3.0"
   },
   "devDependencies": {
     "@arco-plugins/vite-vue": "^1.4.6",

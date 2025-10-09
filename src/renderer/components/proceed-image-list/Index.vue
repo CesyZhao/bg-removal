@@ -70,9 +70,18 @@
                 class="w-12 h-12 rounded-lg cursor-pointer border border-base-300 flex items-center justify-center transition-all"
                 :class="{ 'ring-2 ring-primary ring-offset-1': selectedBgColor === color.value }"
                 :style="{ background: color.style }"
-                @click="selectBackgroundColor(color.value)"
+                @click="selectBackgroundColor(color.value, $event)"
               >
-                <i v-if="color.icon" class="iconfont" :class="color.icon"></i>
+                <ColorPicker
+                  v-if="color.value === 'custom'"
+                  v-model:pure-color="customColor"
+                  :is-widget="true"
+                  :style="colorPickerStyle"
+                  use-type="both"
+                  format="rgb"
+                  @confirm="confirmColor"
+                  @cancel="cancelColorPicker"
+                />
               </div>
             </div>
           </div>
@@ -86,14 +95,14 @@
               <!-- 缩放控制 -->
               <button
                 class="btn btn-sm btn-circle btn-ghost tooltip"
-                data-tip="{{ $t('editor.zoomOut', '缩小') }}"
+                data-tip="{{ t('editor.zoomOut', '缩小') }}"
                 @click="zoomOut"
               >
                 <i class="iconfont icon-suoxiao"></i>
               </button>
               <button
                 class="btn btn-sm btn-circle btn-ghost tooltip"
-                data-tip="{{ $t('editor.zoomIn', '放大') }}"
+                data-tip="{{ t('editor.zoomIn', '放大') }}"
                 @click="zoomIn"
               >
                 <i class="iconfont icon-fangda"></i>
@@ -123,14 +132,6 @@
               <i class="iconfont icon-download mr-1"></i>
               {{ $t('common.download', '下载') }}
             </button>
-          </div>
-        </div>
-
-        <!-- 处理中提示 -->
-        <div v-if="!processedImageUrl" class="absolute inset-0 flex items-center justify-center">
-          <div class="text-center text-base-content/70">
-            <div class="loading loading-spinner loading-lg mb-2"></div>
-            <p>{{ $t('editor.processing', '处理中...') }}</p>
           </div>
         </div>
       </div>
@@ -221,9 +222,9 @@ const imageSize = ref<{ width: number; height: number }>({ width: 0, height: 0 }
 // 背景颜色选项
 const backgroundColors = [
   {
-    value: 'gradient',
+    value: 'custom',
     style: 'linear-gradient(135deg, #f87171, #3b82f6, #10b981)',
-    icon: 'icon-tianjia'
+    icon: 'icon-color'
   },
   {
     value: 'transparent',
@@ -240,17 +241,57 @@ const backgroundColors = [
 // 当前选中的背景颜色
 const selectedBgColor = ref('transparent')
 
+// 自定义颜色
+const customColor = ref('#ff0000')
+
+// 颜色选择器状态
+const showColorPicker = ref(false)
+const colorPickerPosition = ref({ x: 0, y: 0 })
+
+// 颜色选择器样式
+const colorPickerStyle = computed(() => {
+  return {
+    position: 'absolute',
+    left: `${colorPickerPosition.value.x}px`,
+    top: `${colorPickerPosition.value.y}px`
+  }
+})
+
 // 选择背景颜色
-const selectBackgroundColor = (color: string): void => {
-  selectedBgColor.value = color
+const selectBackgroundColor = (color: string, event?: MouseEvent): void => {
+  if (color === 'custom') {
+    // 显示颜色选择器
+    showColorPicker.value = true
+    if (event) {
+      // 设置颜色选择器位置
+      colorPickerPosition.value = {
+        x: event.clientX,
+        y: event.clientY
+      }
+    }
+  } else {
+    // 直接设置选中的背景颜色
+    selectedBgColor.value = color
+  }
+}
+
+// 确认颜色选择
+const confirmColor = (): void => {
+  selectedBgColor.value = 'custom'
+  showColorPicker.value = false
+}
+
+// 取消颜色选择
+const cancelColorPicker = (): void => {
+  showColorPicker.value = false
 }
 
 // 计算背景样式
 const backgroundStyle = computed(() => {
   let obj = {}
   switch (selectedBgColor.value) {
-    case 'gradient':
-      obj = { background: 'linear-gradient(135deg, #f87171, #3b82f6, #10b981)' }
+    case 'custom':
+      obj = { background: customColor.value }
       break
     case 'transparent':
       obj = {
