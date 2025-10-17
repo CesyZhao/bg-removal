@@ -73,7 +73,12 @@
                 @click="selectBackgroundColor(color.value, $event)"
               ></div>
             </div>
-            <div v-if="showColorPicker" class="absolute" :style="colorPickerStyle">
+            <div
+              v-if="showColorPicker"
+              v-clickoutside="cancelColorPicker"
+              class="absolute"
+              :style="colorPickerStyle"
+            >
               <ColorPicker
                 is-widget
                 shape="square"
@@ -191,6 +196,7 @@
 
 <script lang="ts" setup>
 import type { IProcessedImage } from '@renderer/definitions/module'
+import vClickoutside from '@renderer/utils/directives/clickoutside'
 import { defineProps, defineEmits, computed, ref, watch, onBeforeUnmount, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 
@@ -249,11 +255,7 @@ const colorPickerPosition = ref({ x: 0, y: 0 })
 
 // 颜色选择器样式
 const colorPickerStyle = computed(() => {
-  return {
-    position: 'absolute',
-    left: `${colorPickerPosition.value.x}px`,
-    top: `${colorPickerPosition.value.y}px`
-  }
+  return `position: absolute; left: ${colorPickerPosition.value.x}px; top: ${colorPickerPosition.value.y}px`
 })
 
 // 选择背景颜色
