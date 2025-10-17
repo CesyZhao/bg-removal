@@ -71,18 +71,17 @@
                 :class="{ 'ring-2 ring-primary ring-offset-1': selectedBgColor === color.value }"
                 :style="{ background: color.style }"
                 @click="selectBackgroundColor(color.value, $event)"
-              >
-                <ColorPicker
-                  v-if="color.value === 'custom'"
-                  v-model:pure-color="customColor"
-                  :is-widget="true"
-                  :style="colorPickerStyle"
-                  use-type="both"
-                  format="rgb"
-                  @confirm="confirmColor"
-                  @cancel="cancelColorPicker"
-                />
-              </div>
+              ></div>
+            </div>
+            <div v-if="showColorPicker" class="absolute" :style="colorPickerStyle">
+              <ColorPicker
+                is-widget
+                shape="square"
+                use-type="both"
+                format="rgb"
+                @confirm="confirmColor"
+                @cancel="cancelColorPicker"
+              />
             </div>
           </div>
 
@@ -265,8 +264,8 @@ const selectBackgroundColor = (color: string, event?: MouseEvent): void => {
     if (event) {
       // 设置颜色选择器位置
       colorPickerPosition.value = {
-        x: event.clientX,
-        y: event.clientY
+        x: event.target!.offsetLeft,
+        y: event.target!.offsetTop + 54
       }
     }
   } else {
