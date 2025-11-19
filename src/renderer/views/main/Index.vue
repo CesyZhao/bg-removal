@@ -129,6 +129,7 @@
         alt="处理结果"
         @select-image="onSelectImage"
         @add-image="onAddImage"
+        @download="onDownload"
       />
     </transition>
   </div>
@@ -176,7 +177,7 @@ const normalizeProcessedOutput = async (
 
 const startProcessing = async (file: File): Promise<void> => {
   const imageItem: IProcessedImage = {
-    id: nextId++,
+    id: nextId++ + '',
     originalImage: file,
     processedImage: undefined
   }
@@ -268,6 +269,104 @@ const onSelectImage = (img: IProcessedImage): void => {
 
 const onAddImage = (): void => {
   openFilePicker()
+}
+
+const onDownload = (backgroundColor: { type: string; color?: string; gradient?: string }): void => {
+  // 下载当前选中的图片
+  if (activeImage.value?.processedImage) {
+    // 创建带背景颜色的图片并下载
+    createImageWithBackground(backgroundColor)
+  }
+}
+
+// 创建带背景颜色的图片并下载
+const createImageWithBackground = async (backgroundColor: {
+  type: string
+  color?: string
+  gradient?: string
+}): Promise<void> => {
+  if (!activeImage.value?.processedImage) return
+
+  const file = activeImage.value.processedImage
+
+  // 创建一个canvas来合并图片和背景
+  const canvas = document.createElement('canvas')
+  const ctx = canvas.getContext('2d')
+  if (!ctx) return
+
+  // 创建图片对象
+  const img = new Image()
+  const objectUrl = URL.createObjectURL(file)
+
+  // 使用Promise来处理异步操作
+  await new Promise<void>((resolve) => {
+    img.onload = () => {
+      // 设置canvas尺寸
+      canvas.width = img.width
+      canvas.height = img.height
+
+      // 根据背景类型绘制背景
+      switch (backgroundColor.type) {
+        case 'transparent':
+          // 透明背景，不需要绘制背景
+          break
+        case 'white':
+          ctx.fillStyle = '#ffffff'
+          ctx.fillRect(0, 0, canvas.width, canvas.height)
+          break
+        case 'black':
+          ctx.fillStyle = '#000000'
+          ctx.fillRect(0, 0, canvas.width, canvas.height)
+          break
+        case 'gray':
+          ctx.fillStyle = '#cccccc'
+          ctx.fillRect(0, 0, canvas.width, canvas.height)
+          break
+        case 'custom':
+          if (backgroundColor.color) {
+            ctx.fillStyle = backgroundColor.color
+            ctx.fillRect(0, 0, canvas.width, canvas.height)
+          }
+          break
+        case 'ai':
+          if (backgroundColor.gradient) {
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height)
+            // 简化处理，实际应该解析渐变值
+            gradient.addColorStop(0, '#e0f2fe')
+            gradient.addColorStop(1, '#f0fdfa')
+            ctx.fillStyle = gradient
+            ctx.fillRect(0, 0, canvas.width, canvas.height)
+          }
+          break
+        default:
+          // 默认透明背景
+          break
+      }
+
+      // 绘制处理后的图片
+      ctx.drawImage(img, 0, 0)
+
+      // 转换为blob并下载
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const downloadUrl = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = downloadUrl
+          a.download = file.name || 'background-removed.png'
+          document.body.appendChild(a)
+          a.click()
+          document.body.removeChild(a)
+          URL.revokeObjectURL(downloadUrl)
+        }
+        URL.revokeObjectURL(objectUrl)
+        console.log('11111')
+        // 解析Promise，表示下载完成
+        resolve()
+      }, 'image/png')
+    }
+
+    img.src = objectUrl
+  })
 }
 
 onMounted(() => {

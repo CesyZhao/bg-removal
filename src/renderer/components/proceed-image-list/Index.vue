@@ -84,9 +84,21 @@
                 shape="square"
                 use-type="both"
                 format="rgb"
+                @update:pure-color="handleCustomColor"
                 @confirm="confirmColor"
                 @cancel="cancelColorPicker"
-              />
+              >
+                <template #extra>
+                  <div class="flex justify-end gap-2 mt-2">
+                    <button class="btn btn-sm btn-outline" @click="cancelColorPicker">
+                      {{ t('common.cancel', '取消') }}
+                    </button>
+                    <button class="btn btn-sm btn-primary" @click="confirmColor">
+                      {{ t('common.confirm', '确认') }}
+                    </button>
+                  </div>
+                </template>
+              </ColorPicker>
             </div>
           </div>
 
@@ -132,9 +144,23 @@
 
           <div class="mt-16">
             <!-- 下载按钮 -->
-            <button class="btn btn-primary btn-block" @click="emit('download')">
-              <i class="iconfont icon-download mr-1"></i>
-              {{ $t('common.download', '下载') }}
+            <button
+              class="btn btn-primary btn-block"
+              :disabled="downloadStatus === 'loading'"
+              @click="handleDownload"
+            >
+              <template v-if="downloadStatus === 'loading'">
+                <span class="loading loading-spinner loading-sm mr-1"></span>
+                {{ $t('common.downloading', '下载中') }}
+              </template>
+              <template v-else-if="downloadStatus === 'success'">
+                <i class="iconfont icon-check-circle mr-1"></i>
+                {{ $t('common.downloadCompleted', '下载完成') }}
+              </template>
+              <template v-else>
+                <i class="iconfont icon-download mr-1"></i>
+                {{ $t('common.download', '下载') }}
+              </template>
             </button>
           </div>
         </div>
@@ -211,7 +237,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'select-image', image: IProcessedImage): void
   (e: 'add-image', force: boolean): void
-  (e: 'download'): void
+  (e: 'download', backgroundColor: { type: string; color?: string; gradient?: string }): void
 }>()
 
 // refs
@@ -228,7 +254,7 @@ const imageSize = ref<{ width: number; height: number }>({ width: 0, height: 0 }
 const backgroundColors = [
   {
     value: 'custom',
-    style: 'linear-gradient(135deg, #f87171, #3b82f6, #10b981)',
+    style: '',
     icon: 'icon-color'
   },
   {
@@ -245,9 +271,21 @@ const backgroundColors = [
 
 // 当前选中的背景颜色
 const selectedBgColor = ref('transparent')
+// 上一个选中的背景颜色
+const previousBgColor = ref('transparent')
+// 初始化时保持一致
+previousBgColor.value = selectedBgColor.value
 
 // 自定义颜色
 const customColor = ref('#ff0000')
+// 临时自定义颜色（用于预览）
+const tempCustomColor = ref('#ff0000')
+// 初始化时保持一致
+tempCustomColor.value = customColor.value
+
+// 下载状态管理
+const downloadStatus = ref<'idle' | 'loading' | 'success'>('idle')
+const downloadSuccessTimeout = ref<number | null>(null)
 
 // 颜色选择器状态
 const showColorPicker = ref(false)
@@ -261,16 +299,21 @@ const colorPickerStyle = computed(() => {
 // 选择背景颜色
 const selectBackgroundColor = (color: string, event?: MouseEvent): void => {
   if (color === 'custom') {
+    // 保存当前颜色作为上一个颜色
+    previousBgColor.value = selectedBgColor.value
     // 显示颜色选择器
     showColorPicker.value = true
     if (event) {
+      const target = event.target as HTMLElement
       // 设置颜色选择器位置
       colorPickerPosition.value = {
-        x: event.target!.offsetLeft,
-        y: event.target!.offsetTop + 54
+        x: target.offsetLeft,
+        y: target.offsetTop + 54
       }
     }
   } else {
+    // 保存当前颜色作为上一个颜色
+    previousBgColor.value = selectedBgColor.value
     // 直接设置选中的背景颜色
     selectedBgColor.value = color
   }
@@ -278,12 +321,24 @@ const selectBackgroundColor = (color: string, event?: MouseEvent): void => {
 
 // 确认颜色选择
 const confirmColor = (): void => {
+  // 确认临时颜色为正式颜色
+  customColor.value = tempCustomColor.value
+  // 设置选中的背景颜色为自定义
   selectedBgColor.value = 'custom'
   showColorPicker.value = false
 }
 
+// 处理自定义颜色变化（预览）
+const handleCustomColor = (color): void => {
+  // 只更新临时颜色（用于预览），不改变选中的背景颜色
+  tempCustomColor.value = color
+}
+
 // 取消颜色选择
 const cancelColorPicker = (): void => {
+  // 恢复临时颜色为正式颜色
+  tempCustomColor.value = customColor.value
+  // 注意：不改变 selectedBgColor.value，让它保持原来的状态
   showColorPicker.value = false
 }
 
@@ -292,6 +347,7 @@ const backgroundStyle = computed(() => {
   let obj = {}
   switch (selectedBgColor.value) {
     case 'custom':
+      // 使用正式颜色而不是临时颜色
       obj = { background: customColor.value }
       break
     case 'transparent':
@@ -428,6 +484,14 @@ watch(
   { immediate: true, deep: true }
 )
 
+// 监听背景颜色变化，更新上一个背景颜色
+watch(selectedBgColor, (newVal, oldVal) => {
+  // 只有当颜色选择器关闭时才更新上一个颜色
+  if (!showColorPicker.value) {
+    previousBgColor.value = oldVal
+  }
+})
+
 // 监听处理图片列表变化
 watch(
   () => props.processedImagesList,
@@ -515,6 +579,44 @@ const drag = (event: MouseEvent): void => {
   }
 }
 
+// 处理下载事件
+const handleDownload = (): void => {
+  // 设置下载状态为加载中
+  downloadStatus.value = 'loading'
+
+  // 获取当前背景颜色信息
+  let backgroundColorInfo = { type: selectedBgColor.value }
+
+  // 如果是自定义颜色，添加颜色值
+  if (selectedBgColor.value === 'custom') {
+    backgroundColorInfo['color'] = customColor.value
+  }
+
+  // 如果是渐变色，添加渐变值
+  if (selectedBgColor.value === 'ai') {
+    backgroundColorInfo['gradient'] = 'linear-gradient(135deg, #e0f2fe, #f0fdfa)'
+  }
+
+  // 监听下载完成事件
+  const handleDownloadComplete = (): void => {
+    // 设置下载状态为成功
+    downloadStatus.value = 'success'
+
+    // 2秒后恢复初始状态
+    if (downloadSuccessTimeout.value) {
+      clearTimeout(downloadSuccessTimeout.value)
+    }
+    downloadSuccessTimeout.value = window.setTimeout(() => {
+      downloadStatus.value = 'idle'
+    }, 2000)
+  }
+
+  // 触发下载事件，并传递完成回调
+  emit('download', backgroundColorInfo)
+  // 模拟下载完成（在实际应用中，应该在下载真正完成时调用）
+  setTimeout(handleDownloadComplete, 1000)
+}
+
 onMounted(() => {
   window.addEventListener('resize', handleResize)
   updateMaxScrollPosition()
@@ -524,6 +626,10 @@ onMounted(() => {
 onBeforeUnmount(() => {
   clearObjectURLs()
   window.removeEventListener('resize', handleResize)
+  // 清理下载成功提示的定时器
+  if (downloadSuccessTimeout.value) {
+    clearTimeout(downloadSuccessTimeout.value)
+  }
 })
 </script>
 

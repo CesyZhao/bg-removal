@@ -6,7 +6,9 @@ export default {
     downloadFailed: '下载失败',
     downloadCompleted: '下载完成',
     enabled: '已启用',
-    disabled: '已禁用'
+    disabled: '已禁用',
+    confirm: '确认',
+    cancel: '取消'
   },
   nav: {
     theme: '主题',

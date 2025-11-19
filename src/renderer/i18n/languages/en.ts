@@ -6,7 +6,9 @@ export default {
     downloadFailed: 'Download failed',
     downloadCompleted: 'Download completed',
     enabled: 'Enabled',
-    disabled: 'Disabled'
+    disabled: 'Disabled',
+    confirm: 'Confirm',
+    cancel: 'Cancel'
   },
   nav: {
     theme: 'Theme',
