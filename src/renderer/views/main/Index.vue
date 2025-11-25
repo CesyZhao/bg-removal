@@ -67,18 +67,36 @@
                     <p class="font-medium text-gray-800">拖拽图片到此处或点击上传</p>
                     <p class="text-sm text-gray-500 mt-1">支持 JPG, PNG, WEBP 格式，或直接粘贴</p>
                   </div>
-                  <button
-                    class="btn btn-primary text-white border-none mt-2"
-                    @click="openFilePicker"
-                  >
-                    选择图片
-                  </button>
+                  <div class="flex gap-2">
+                    <button
+                      class="btn btn-primary text-white border-none mt-2"
+                      @click="openFilePicker"
+                    >
+                      选择图片
+                    </button>
+                    <button
+                      class="btn btn-secondary text-white border-none mt-2"
+                      @click="openFolderPicker"
+                    >
+                      选择文件夹
+                    </button>
+                  </div>
                   <input
                     ref="fileInputRef"
                     type="file"
                     accept="image/*"
                     class="hidden"
+                    multiple
                     @change="handleFileInput"
+                  />
+                  <input
+                    ref="folderInputRef"
+                    type="file"
+                    class="hidden"
+                    webkitdirectory
+                    directory
+                    multiple
+                    @change="handleFolderInput"
                   />
                 </div>
               </div>
@@ -126,6 +144,7 @@
         v-if="activeImage"
         :image="activeImage"
         :processed-images-list="processedImages"
+        :batch-process-items="batchProcessItems"
         alt="处理结果"
         @select-image="onSelectImage"
         @add-image="onAddImage"
@@ -145,11 +164,33 @@ import Setting from '@renderer/components/setting/Index.vue'
 import { onMounted, onBeforeUnmount, ref } from 'vue'
 import { getBackgroundRemovalProcessor } from '@renderer/processors/background-removal'
 import type { IProcessedImage } from '@renderer/definitions/module'
+import { checkSavePathSetting, promptForSavePathSetting } from '@renderer/utils/save-path-checker'
 
 const examples: string[] = [example1, example2, example3, example4]
 
 const load = ref(false)
 const fileInputRef = ref<HTMLInputElement | null>(null)
+const folderInputRef = ref<HTMLInputElement | null>(null)
+
+// 批量处理项接口
+interface IBatchProcessedFile {
+  originalFile: File
+  processedFile: File
+  path: string
+}
+
+interface IBatchProcessItem {
+  id: string
+  name: string
+  files: File[]
+  processedFiles: IBatchProcessedFile[]
+  totalCount: number
+  processedCount: number
+  status: 'processing' | 'completed' | 'failed'
+}
+
+// 批量处理队列
+const batchProcessItems = ref<IBatchProcessItem[]>([])
 
 // 处理队列及当前图片
 const processedImages = ref<IProcessedImage[]>([])
@@ -210,21 +251,58 @@ const startProcessing = async (file: File): Promise<void> => {
 }
 
 const openFilePicker = (): void => {
-  fileInputRef.value?.click()
+  if (fileInputRef.value) {
+    fileInputRef.value.value = ''
+    fileInputRef.value.click()
+  }
+}
+
+const openFolderPicker = (): void => {
+  if (folderInputRef.value) {
+    folderInputRef.value.value = ''
+    folderInputRef.value.click()
+  }
 }
 
 const handleFileInput = (e: Event): void => {
   const input = e.target as HTMLInputElement
-  const file = input.files && input.files[0]
-  if (file) void startProcessing(file)
+  const files = input.files
+  if (files && files.length > 0) {
+    // 单文件上传
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
+      if (file && file.type.startsWith('image/')) {
+        void startProcessing(file)
+      }
+    }
+  }
+  // 重置input值，允许重复选择同一文件
+  if (input) input.value = ''
+}
+
+const handleFolderInput = (e: Event): void => {
+  const input = e.target as HTMLInputElement
+  const files = input.files
+  if (files && files.length > 0) {
+    // 文件夹上传，批量处理
+    void startBatchProcessing(Array.from(files))
+  }
+  // 重置input值，允许重复选择同一文件夹
   if (input) input.value = ''
 }
 
 const handleDrop = (e: DragEvent): void => {
   const files = e.dataTransfer?.files
   if (files && files.length > 0) {
-    const file = files[0]
-    if (file && file.type.startsWith('image/')) void startProcessing(file)
+    // 检查是否是文件夹拖放
+    if (files.length > 1 || (files[0] && files[0].webkitRelativePath)) {
+      // 文件夹拖放，批量处理
+      void startBatchProcessing(Array.from(files))
+    } else {
+      // 单文件拖放
+      const file = files[0]
+      if (file && file.type.startsWith('image/')) void startProcessing(file)
+    }
   }
 }
 
@@ -271,36 +349,103 @@ const onAddImage = (): void => {
   openFilePicker()
 }
 
-const onDownload = (backgroundColor: { type: string; color?: string; gradient?: string }): void => {
-  // 下载当前选中的图片
-  if (activeImage.value?.processedImage) {
-    // 创建带背景颜色的图片并下载
-    createImageWithBackground(backgroundColor)
-  }
-}
-
-// 创建带背景颜色的图片并下载
-const createImageWithBackground = async (backgroundColor: {
+const onDownload = async (backgroundColor: {
   type: string
   color?: string
   gradient?: string
 }): Promise<void> => {
-  if (!activeImage.value?.processedImage) return
+  // 检查用户是否设置了文件保存路径
+  const { hasSavePath } = await checkSavePathSetting()
+
+  // 如果没有设置保存路径，提示用户去设置
+  if (!hasSavePath) {
+    const goToSettings = await promptForSavePathSetting()
+    if (!goToSettings) {
+      // 用户取消设置，直接返回
+      return
+    }
+    // 用户选择去设置，等待设置完成
+    // 添加事件监听器等待设置完成后再继续下载
+    const handleSettingsSaved = (): void => {
+      // 重新检查保存路径设置
+      checkSavePathSetting().then(({ hasSavePath: pathSet }) => {
+        if (pathSet) {
+          // 设置已完成，继续下载
+          performDownload(backgroundColor)
+        }
+      })
+      // 移除事件监听器
+      window.removeEventListener('settings-saved', handleSettingsSaved)
+    }
+
+    window.addEventListener('settings-saved', handleSettingsSaved)
+    return
+  }
+
+  // 直接执行下载
+  await performDownload(backgroundColor)
+}
+
+// 实际执行下载的函数
+const performDownload = async (backgroundColor: {
+  type: string
+  color?: string
+  gradient?: string
+}): Promise<void> => {
+  // 下载当前选中的图片
+  if (activeImage.value?.processedImage) {
+    // 创建带背景颜色的图片blob
+    const blob = await createImageWithBackground(backgroundColor)
+    if (blob) {
+      // 创建文件数据对象
+      const fileName = activeImage.value.processedImage.name || 'background-removed.png'
+      const fileData = {
+        name: fileName,
+        data: await blob.arrayBuffer()
+      }
+
+      // 获取用户设置的保存路径
+      const { savePath } = await checkSavePathSetting()
+
+      console.log(savePath, '------------')
+
+      // 使用文件管理器保存文件
+      try {
+        const success = await window.api.file.saveSingleFile(fileData, fileName, savePath)
+        if (success) {
+          console.log('文件保存成功')
+        } else {
+          console.log('文件保存失败或用户取消')
+        }
+      } catch (error) {
+        console.error('文件保存出错:', error)
+      }
+    }
+  }
+}
+
+// 创建带背景颜色的图片并返回blob
+const createImageWithBackground = async (backgroundColor: {
+  type: string
+  color?: string
+  gradient?: string
+}): Promise<Blob | null> => {
+  if (!activeImage.value?.processedImage) return null
 
   const file = activeImage.value.processedImage
 
   // 创建一个canvas来合并图片和背景
   const canvas = document.createElement('canvas')
   const ctx = canvas.getContext('2d')
-  if (!ctx) return
+  if (!ctx) return null
 
   // 创建图片对象
   const img = new Image()
   const objectUrl = URL.createObjectURL(file)
 
   // 使用Promise来处理异步操作
-  await new Promise<void>((resolve) => {
-    img.onload = () => {
+  return await new Promise<Blob | null>((resolve) => {
+    img.onload = function () {
       // 设置canvas尺寸
       canvas.width = img.width
       canvas.height = img.height
@@ -346,27 +491,89 @@ const createImageWithBackground = async (backgroundColor: {
       // 绘制处理后的图片
       ctx.drawImage(img, 0, 0)
 
-      // 转换为blob并下载
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const downloadUrl = URL.createObjectURL(blob)
-          const a = document.createElement('a')
-          a.href = downloadUrl
-          a.download = file.name || 'background-removed.png'
-          document.body.appendChild(a)
-          a.click()
-          document.body.removeChild(a)
-          URL.revokeObjectURL(downloadUrl)
-        }
+      // 转换为blob并返回
+      canvas.toBlob(function (blob) {
         URL.revokeObjectURL(objectUrl)
-        console.log('11111')
-        // 解析Promise，表示下载完成
-        resolve()
+        resolve(blob)
       }, 'image/png')
     }
 
     img.src = objectUrl
   })
+}
+
+const startBatchProcessing = async (files: File[]): Promise<void> => {
+  // 过滤出图片文件
+  const imageFiles = files.filter((file) => file.type.startsWith('image/'))
+
+  if (imageFiles.length === 0) {
+    console.warn('没有找到有效的图片文件')
+    return
+  }
+
+  // 创建批量处理任务
+  const batchId = 'batch-' + Date.now()
+  const batchItem: IBatchProcessItem = {
+    id: batchId,
+    name: getBatchName(files),
+    files: imageFiles,
+    processedFiles: [],
+    totalCount: imageFiles.length,
+    processedCount: 0,
+    status: 'processing'
+  }
+
+  batchProcessItems.value.push(batchItem)
+
+  // 并行处理所有图片
+  const processPromises = imageFiles.map(async (file) => {
+    try {
+      const processor = getBackgroundRemovalProcessor()
+      const result = await processor.removeBackground(file)
+      const processedFile = await normalizeProcessedOutput(result, file.name.split('.')[0])
+
+      if (processedFile) {
+        // 更新批量处理项
+        const batchIndex = batchProcessItems.value.findIndex((item) => item.id === batchId)
+        if (batchIndex !== -1) {
+          batchProcessItems.value[batchIndex].processedFiles.push({
+            originalFile: file,
+            processedFile: processedFile,
+            path: file.webkitRelativePath || file.name
+          })
+          batchProcessItems.value[batchIndex].processedCount++
+
+          // 检查是否所有文件都处理完成
+          if (
+            batchProcessItems.value[batchIndex].processedCount ===
+            batchProcessItems.value[batchIndex].totalCount
+          ) {
+            batchProcessItems.value[batchIndex].status = 'completed'
+          }
+        }
+      }
+    } catch (e) {
+      console.error('批量处理图片失败:', e)
+      // 更新批量处理项状态为失败
+      const batchIndex = batchProcessItems.value.findIndex((item) => item.id === batchId)
+      if (batchIndex !== -1) {
+        batchProcessItems.value[batchIndex].status = 'failed'
+      }
+    }
+  })
+
+  // 等待所有处理完成
+  await Promise.all(processPromises)
+}
+
+// 获取批量处理名称
+const getBatchName = (files: File[]): string => {
+  // 尝试从第一个文件的路径中获取文件夹名称
+  if (files.length > 0 && files[0].webkitRelativePath) {
+    const pathParts = files[0].webkitRelativePath.split('/')
+    return pathParts[0] || '批量处理'
+  }
+  return '批量处理'
 }
 
 onMounted(() => {

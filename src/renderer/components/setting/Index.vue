@@ -227,7 +227,7 @@
 
 <script setup lang="ts">
 import { IconQuestionCircleFill, IconClose } from '@arco-design/web-vue/es/icon'
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { SettingGroup } from '@renderer/definitions/setting'
 import { settingModule, fileModule } from './index'
@@ -425,32 +425,32 @@ const initSettings = async (): Promise<void> => {
 
 // 保存所有设置
 const saveAllSettings = async (): Promise<void> => {
-  closePopover(true)
-
   try {
-    // 检查是否有需要重启的设置
+    // 收集所有变更的设置项
+    const settingsToSave: Record<string, unknown> = {}
     let needsRestart = false
 
-    // 保存所有变更的设置
     for (const [key, value] of changedSettings.value.entries()) {
-      await settingModule.set(key, value)
+      settingsToSave[key] = value
 
-      const keysRequiredRestart = ['language', 'theme', 'enableGPU']
-      // 检查是否是 GPU 设置并且值发生了变化
-      if (keysRequiredRestart.includes(key) && originalSettings.value.get(key) !== value) {
+      // 检查是否有需要重启的设置项
+      const setting = appSetting.value
+        .flatMap((category) => category.items)
+        .find((item) => item.key === key)
+
+      if (setting?.key === 'enableGPU' || setting?.key === 'language') {
         needsRestart = true
       }
+    }
 
-      // 在保存时应用设置
-      if (key === 'theme') {
-        applyTheme(value as string)
-      }
-      if (key === 'language') {
-        locale.value = value as string
-      }
+    // 保存所有变更的设置项
+    if (Object.keys(settingsToSave).length > 0) {
+      await settingModule.setMultiple(settingsToSave)
 
       // 更新原始设置值，以便后续比较
-      originalSettings.value.set(key, value)
+      for (const [key, value] of changedSettings.value.entries()) {
+        originalSettings.value.set(key, value)
+      }
     }
     // 清空变更记录
     changedSettings.value.clear()
@@ -466,6 +466,8 @@ const saveAllSettings = async (): Promise<void> => {
       }, 1000)
     } else {
       showMessage('success', t('settings.messages.saved'))
+      // 触发设置保存完成事件
+      window.dispatchEvent(new CustomEvent('settings-saved'))
     }
   } catch (error) {
     console.error('保存设置失败:', error)
@@ -486,8 +488,24 @@ const handleReset = async (): Promise<void> => {
   }
 }
 
+// 添加事件监听器，用于从其他组件触发显示设置页面
+const handleShowSettings = (): void => {
+  visible.value = true
+  // 每次打开弹窗时重新初始化设置
+  initSettings()
+  // 重置变更记录
+  changedSettings.value.clear()
+}
+
 onMounted(() => {
   initSettings()
+  // 添加事件监听器
+  window.addEventListener('show-settings', handleShowSettings)
+})
+
+onUnmounted(() => {
+  // 移除事件监听器
+  window.removeEventListener('show-settings', handleShowSettings)
 })
 </script>
 

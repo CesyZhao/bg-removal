@@ -3,6 +3,13 @@ import { electronAPI } from '@electron-toolkit/preload'
 import { BridgeEvent } from '../common/definitions/bridge'
 import type { ModelType, ModelDownloadProgress, ModelInfo } from '../common/definitions/model'
 
+// 定义批量文件信息接口
+interface BatchFileInfo {
+  originalFile: { name: string; data: ArrayBuffer }
+  processedFile: { name: string; data: ArrayBuffer }
+  relativePath: string
+}
+
 // Custom APIs for renderer
 const api = {
   // 模型相关 API
@@ -59,7 +66,7 @@ const api = {
       const wrappedCallback = (
         _: IpcRendererEvent,
         data: { modelType: ModelType; progress: ModelDownloadProgress }
-      ): unknown => {
+      ): void => {
         callback(data)
       }
       ipcRenderer.on(BridgeEvent.MODEL_DOWNLOAD_PROGRESS, wrappedCallback)
@@ -67,8 +74,31 @@ const api = {
     },
 
     // 移除下载进度监听
-    removeDownloadProgressListener: (callback: unknown) => {
+    removeDownloadProgressListener: (
+      callback: (event: IpcRendererEvent, ...args: unknown[]) => void
+    ) => {
       ipcRenderer.removeListener(BridgeEvent.MODEL_DOWNLOAD_PROGRESS, callback)
+    }
+  },
+
+  // 文件管理相关 API
+  file: {
+    // 保存单个文件
+    saveSingleFile: (
+      fileData: { name: string; data: ArrayBuffer },
+      defaultName?: string,
+      savePath?: string
+    ): Promise<boolean> => {
+      return ipcRenderer.invoke('save-single-file', fileData, defaultName, savePath)
+    },
+
+    // 批量保存文件
+    saveBatchFiles: (
+      files: BatchFileInfo[],
+      batchName: string,
+      savePath?: string
+    ): Promise<boolean> => {
+      return ipcRenderer.invoke('save-batch-files', files, batchName, savePath)
     }
   }
 }

@@ -3,6 +3,7 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { initializeModelManager } from './model-manager'
+import './file-manager' // 引入文件管理器
 
 function createWindow(): void {
   // Create the browser window.

@@ -166,6 +166,80 @@
         </div>
       </div>
     </div>
+    <!-- 批量处理结果列表 -->
+    <div
+      v-if="batchProcessItems && batchProcessItems.length > 0"
+      class="relative flex items-center w-4/5 max-w-[80%] h-16 mt-4"
+    >
+      <div
+        class="processed-batch-list w-full h-16 overflow-x-auto overflow-y-hidden whitespace-nowrap"
+      >
+        <div class="inline-flex h-full">
+          <div
+            v-for="batchItem in batchProcessItems"
+            :key="batchItem.id"
+            class="w-16 h-16 mr-2.5 flex justify-center items-center border rounded cursor-pointer transition-all duration-300 overflow-hidden bg-primary/10 border-primary relative"
+            @mouseenter="showBatchTooltip(batchItem.id)"
+            @mouseleave="hideBatchTooltip"
+          >
+            <!-- 批量处理缩略图（使用第一张图片） -->
+            <img
+              v-if="batchItem.processedFiles.length > 0"
+              :src="getBatchItemImageUrl(batchItem.processedFiles[0].processedFile)"
+              :alt="batchItem.name"
+              class="max-w-full max-h-full object-contain"
+            />
+            <i v-else class="iconfont icon-folder"></i>
+
+            <!-- 数量标记 -->
+            <div
+              class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center"
+            >
+              {{ batchItem.totalCount }}
+            </div>
+
+            <!-- 悬浮显示的批量处理列表 -->
+            <div
+              v-if="showBatchTooltipId === batchItem.id"
+              class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-white shadow-lg rounded p-2 min-w-[200px] z-20"
+            >
+              <div class="text-sm font-medium mb-1">{{ batchItem.name }}</div>
+              <div class="text-xs text-gray-500 mb-2">
+                {{ batchItem.processedCount }}/{{ batchItem.totalCount }} 已处理
+              </div>
+              <div class="max-h-40 overflow-y-auto">
+                <div
+                  v-for="(file, index) in batchItem.processedFiles"
+                  :key="index"
+                  class="text-xs py-1 border-b border-gray-100 last:border-b-0"
+                >
+                  {{ getFileDisplayName(file.path) }}
+                </div>
+              </div>
+              <!-- 批量保存按钮 -->
+              <button
+                class="btn btn-xs btn-primary mt-2 w-full"
+                :disabled="batchSaveStatus === 'saving'"
+                @click.stop="handleBatchSave(batchItem)"
+              >
+                <template v-if="batchSaveStatus === 'saving'">
+                  <span class="loading loading-spinner loading-xs mr-1"></span>
+                  保存中...
+                </template>
+                <template v-else-if="batchSaveStatus === 'success'">
+                  <i class="iconfont icon-check-circle mr-1"></i>
+                  保存成功
+                </template>
+                <template v-else>
+                  <i class="iconfont icon-save mr-1"></i>
+                  批量保存
+                </template>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
     <!-- 处理图片列表 -->
     <div
       v-if="processedImagesList && processedImagesList.length > 0"
@@ -225,12 +299,31 @@ import type { IProcessedImage } from '@renderer/definitions/module'
 import vClickoutside from '@renderer/utils/directives/clickoutside'
 import { defineProps, defineEmits, computed, ref, watch, onBeforeUnmount, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { checkSavePathSetting, promptForSavePathSetting } from '@renderer/utils/save-path-checker'
 
 const { t } = useI18n()
+
+// 批量处理项接口
+interface IBatchProcessedFile {
+  originalFile: File
+  processedFile: File
+  path: string
+}
+
+interface IBatchProcessItem {
+  id: string
+  name: string
+  files: File[]
+  processedFiles: IBatchProcessedFile[]
+  totalCount: number
+  processedCount: number
+  status: 'processing' | 'completed' | 'failed'
+}
 
 const props = defineProps<{
   image: IProcessedImage
   processedImagesList?: IProcessedImage[] // 处理图片列表
+  batchProcessItems?: IBatchProcessItem[] // 批量处理项目列表
   alt?: string
 }>()
 
@@ -238,6 +331,7 @@ const emit = defineEmits<{
   (e: 'select-image', image: IProcessedImage): void
   (e: 'add-image', force: boolean): void
   (e: 'download', backgroundColor: { type: string; color?: string; gradient?: string }): void
+  (e: 'batch-save', batchItem: IBatchProcessItem): void
 }>()
 
 // refs
@@ -286,6 +380,13 @@ tempCustomColor.value = customColor.value
 // 下载状态管理
 const downloadStatus = ref<'idle' | 'loading' | 'success'>('idle')
 const downloadSuccessTimeout = ref<number | null>(null)
+
+// 批量保存状态
+const batchSaveStatus = ref<'idle' | 'saving' | 'success'>('idle')
+const batchSaveSuccessTimeout = ref<number | null>(null)
+
+// 批量处理悬浮提示状态
+const showBatchTooltipId = ref<string | null>(null)
 
 // 颜色选择器状态
 const showColorPicker = ref(false)
@@ -580,25 +681,29 @@ const drag = (event: MouseEvent): void => {
 }
 
 // 处理下载事件
-const handleDownload = (): void => {
+const handleDownload = async (): Promise<void> => {
   // 设置下载状态为加载中
   downloadStatus.value = 'loading'
 
   // 获取当前背景颜色信息
-  let backgroundColorInfo = { type: selectedBgColor.value }
+  const backgroundColorInfo: { type: string; color?: string; gradient?: string } = {
+    type: selectedBgColor.value
+  }
 
   // 如果是自定义颜色，添加颜色值
   if (selectedBgColor.value === 'custom') {
-    backgroundColorInfo['color'] = customColor.value
+    backgroundColorInfo.color = customColor.value
   }
 
   // 如果是渐变色，添加渐变值
   if (selectedBgColor.value === 'ai') {
-    backgroundColorInfo['gradient'] = 'linear-gradient(135deg, #e0f2fe, #f0fdfa)'
+    backgroundColorInfo.gradient = 'linear-gradient(135deg, #e0f2fe, #f0fdfa)'
   }
 
-  // 监听下载完成事件
-  const handleDownloadComplete = (): void => {
+  try {
+    // 触发下载事件
+    await emit('download', backgroundColorInfo)
+
     // 设置下载状态为成功
     downloadStatus.value = 'success'
 
@@ -606,15 +711,129 @@ const handleDownload = (): void => {
     if (downloadSuccessTimeout.value) {
       clearTimeout(downloadSuccessTimeout.value)
     }
-    downloadSuccessTimeout.value = window.setTimeout(() => {
+    downloadSuccessTimeout.value = window.setTimeout(function () {
       downloadStatus.value = 'idle'
     }, 2000)
+  } catch (error) {
+    console.error('下载失败:', error)
+    // 恢复初始状态
+    downloadStatus.value = 'idle'
+  }
+}
+
+// 处理批量保存
+const handleBatchSave = async (batchItem: IBatchProcessItem): Promise<void> => {
+  // 检查用户是否设置了文件保存路径
+  const { hasSavePath } = await checkSavePathSetting()
+
+  // 如果没有设置保存路径，提示用户去设置
+  if (!hasSavePath) {
+    const goToSettings = await promptForSavePathSetting()
+    if (!goToSettings) {
+      // 用户取消设置，直接返回
+      return
+    }
+    // 用户选择去设置，等待设置完成
+    // 添加事件监听器等待设置完成后再继续保存
+    const handleSettingsSaved = (): void => {
+      // 重新检查保存路径设置
+      checkSavePathSetting().then(({ hasSavePath: pathSet }) => {
+        if (pathSet) {
+          // 设置已完成，继续保存
+          performBatchSave(batchItem)
+        }
+      })
+      // 移除事件监听器
+      window.removeEventListener('settings-saved', handleSettingsSaved)
+    }
+
+    window.addEventListener('settings-saved', handleSettingsSaved)
+    return
   }
 
-  // 触发下载事件，并传递完成回调
-  emit('download', backgroundColorInfo)
-  // 模拟下载完成（在实际应用中，应该在下载真正完成时调用）
-  setTimeout(handleDownloadComplete, 1000)
+  // 直接执行批量保存
+  await performBatchSave(batchItem)
+}
+
+// 实际执行批量保存的函数
+const performBatchSave = async (batchItem: IBatchProcessItem): Promise<void> => {
+  // 设置批量保存状态为保存中
+  batchSaveStatus.value = 'saving'
+
+  try {
+    // 准备批量文件数据
+    const batchFiles: {
+      originalFile: { name: string; data: ArrayBuffer }
+      processedFile: { name: string; data: ArrayBuffer }
+      relativePath: string
+    }[] = []
+    for (const fileInfo of batchItem.processedFiles) {
+      // 将File对象转换为可序列化的数据
+      const processedArrayBuffer = await fileInfo.processedFile.arrayBuffer()
+      const originalArrayBuffer = await fileInfo.originalFile.arrayBuffer()
+
+      batchFiles.push({
+        originalFile: {
+          name: fileInfo.originalFile.name,
+          data: originalArrayBuffer
+        },
+        processedFile: {
+          name: fileInfo.processedFile.name,
+          data: processedArrayBuffer
+        },
+        relativePath: fileInfo.path
+      })
+    }
+
+    // 获取用户设置的保存路径
+    const { savePath } = await checkSavePathSetting()
+
+    // 使用文件管理器保存批量文件
+    const success = await window.api.file.saveBatchFiles(batchFiles, batchItem.name, savePath)
+
+    if (success) {
+      // 设置批量保存状态为成功
+      batchSaveStatus.value = 'success'
+
+      // 2秒后恢复初始状态
+      if (batchSaveSuccessTimeout.value) {
+        clearTimeout(batchSaveSuccessTimeout.value)
+      }
+      batchSaveSuccessTimeout.value = window.setTimeout(function () {
+        batchSaveStatus.value = 'idle'
+      }, 2000)
+    } else {
+      // 恢复初始状态
+      batchSaveStatus.value = 'idle'
+    }
+  } catch (error) {
+    console.error('批量保存失败:', error)
+    // 恢复初始状态
+    batchSaveStatus.value = 'idle'
+  }
+}
+
+// 显示批量处理悬浮提示
+const showBatchTooltip = (batchId: string): void => {
+  showBatchTooltipId.value = batchId
+}
+
+// 隐藏批量处理悬浮提示
+const hideBatchTooltip = (): void => {
+  showBatchTooltipId.value = null
+}
+
+// 获取批量处理项图片URL
+const getBatchItemImageUrl = (file: File): string => {
+  const url = URL.createObjectURL(file)
+  objectUrls.value.push(url)
+  return url
+}
+
+// 获取文件显示名称
+const getFileDisplayName = (path: string): string => {
+  const parts = path.split('/')
+  return parts[parts.length - 1]
 }
 
 onMounted(() => {
